@@ -1,0 +1,16 @@
+#!/usr/bin/python3
+
+from sys import argv;
+
+with open("./memory/mem.dat", "w") as fl:
+  fl.write("\0"*int(argv[1]));
+
+with open("./memory/memd.dat", "w") as fl:
+  fl.write("\0"*int(argv[2]));
+
+with open("./memory/memc.dat", "w") as fl:
+  fl.write("\0"*int(argv[3]));
+
+with open("./memory/memsd.dat", "w") as fl:
+  fl.write("\0"*int(argv[4]));
+

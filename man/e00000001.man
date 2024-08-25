@@ -1,0 +1,4 @@
+Memory file missing or corrupted.
+Please, generate new memory files
+using `./memory-gen 1024 1024 198
+4 64`                            

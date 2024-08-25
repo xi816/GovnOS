@@ -1,0 +1,9 @@
+GovnOS Manual page 1
+
+Use `wd` to display the current directory.
+Use `to FOLDER*` to go to that folder.
+Use `he` to display files in the current folder.
+Use `ba` to go back one folder.
+
+Use `logout` to quit command mode.
+

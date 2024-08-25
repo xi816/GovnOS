@@ -1,0 +1,387 @@
+# Говнокод OFF
+# Говнокод ON
+
+import sys;
+import datetime;
+import readchar;
+from copy import copy;
+
+# Плюшки
+arp = 0;
+screenLength = None;
+govnosExit = False;
+while (arp < len(sys.argv)):
+  if (sys.argv[arp] == "-s"):
+    screenLength = int(sys.argv[arp+1]);
+  arp += 1;
+if (screenLength == None):
+  print("\x1B[31mЧел длину экрана укажи потом работать начну\x1B[0m");
+  sys.exit(1);
+
+# Initializing memory
+MEMORY = [0 for i in range(1024)];
+MEMORYD = [0 for i in range(1024)];
+MEMORYC = [0 for i in range(1984)];
+MEMORYSD = [0 for i in range(64)];
+
+# Переменная с текущей директорией
+CVWD = "*";
+
+govnocodePage00 = ["\\0", "\\d", "\\f", "\\g", " ", "!", "?", "*", "&", "\"", "#", "@", ":", ";", "+", "-", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "(", ")", "=", "_", "/", ".", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "EOF"];
+
+def print00(*args, end="", sep=" "):
+  print(*args, end=end, sep=sep);
+  sys.stdout.flush();
+
+def getFolds(folds, CVWD):
+  foldsn = [];
+  for fold in folds:
+    print(folds);
+    if (fold.startswith(CVWD)):
+      fold = fold[len(CVWD):];
+      stars = 1;
+      for i in fold:
+        if (i == "*"):
+          stars -= 1;
+      if (stars < 0):
+        continue;
+      foldsn.append(fold);
+  return foldsn[1:];
+
+# Колхоз :D
+def printScr(ss: list, scl):
+  if (len(ss) > scl):
+    print("\x1B[31mИди в жопу чел\x1B[0m");
+  for j in ss:
+    print(j);
+  ssl = len(ss);
+  while (ssl != scl):
+    print();
+    ssl += 1;
+
+def sysSOD(errorcode):
+  print("\x1B[44m", end="")
+  print("                                 ");
+  print("    ·     /                      ");
+  print("         /                       ");
+  print("         \\                       ");
+  print("    ·     \\                      ");
+  print("                                 ");
+  print(f"Error {errorcode}                 ");
+  with open(f"./man/e{errorcode[2:]}.man") as fl:
+    print(f"{fl.read()}\x1B[0m");
+  input();
+  sys.exit(2);
+
+def sysManual(page):
+  with open(f"./man/{page:0>2}.man", "r") as fl:
+    return fl.read();
+
+def strify(l: list):
+  return list(map(chr, l));
+
+def strifyj(l: list):
+  return "".join(strify(l));
+
+def splitlsj(s: str):
+  return list(map(ord, s));
+
+def readord():
+  k = readchar.readkey();
+  return splitlsj(k) if len(k) > 1 else ord(k[0]);
+
+# Function to load memory from the host hard drive
+def memLoad():
+  rl = [];
+  try:
+    with open("./memory/mem.dat", "r") as fl:
+      mm = fl.read();
+      if (mm):
+        rl.append(splitlsj(mm));
+      else:
+        rl.append([0 for i in range(1024)]);
+    with open("./memory/memd.dat", "r") as fl:
+      mm = fl.read();
+      if (mm):
+        rl.append(splitlsj(mm));
+      else:
+        rl.append([0 for i in range(1024)]);
+    with open("./memory/memc.dat", "r") as fl:
+      mm = fl.read();
+      if (mm):
+        rl.append(splitlsj(mm));
+      else:
+        rl.append([0 for i in range(1984)]);
+    with open("./memory/memsd.dat", "r") as fl:
+      mm = fl.read();
+      if (mm):
+        rl.append(splitlsj(mm));
+      else:
+        rl.append([0 for i in range(64)]);
+    return rl;
+  except:
+    sysSOD("0x00000001");
+
+# Function to save memory to the host hard drive
+def memSave(MEM, MEMD, MEMC, MEMSD):
+  with open("./memory/mem.dat", "w") as fl:
+    fl.write(strifyj(MEMORY));
+  with open("./memory/memd.dat", "w") as fl:
+    fl.write(strifyj(MEMORYD));
+  with open("./memory/memc.dat", "w") as fl:
+    fl.write(strifyj(MEMORYC));
+  with open("./memory/memsd.dat", "w") as fl:
+    fl.write(strifyj(MEMORYSD));
+  print(f"MEM: {MEMORY[:55]}");
+
+# Function to dump the memory
+def memDump(MEMORY, size, **kwargs):
+  for i in range(size):
+    print(f"|{MEMORY[i]}|", end=" ");
+  if (kwargs.get("lf")):
+    print();
+
+def memDump00(MEMORY, size, **kwargs):
+  tx = "";
+  for i in range(size):
+    tx += f"|{MEMORY[i]}|";
+  if (kwargs.get("lf")):
+    tx += "\n";
+  return tx;
+
+# Function to dump the memory using GovnoCode
+def memDumpUnicode(MEMORY, size, **kwargs):
+  mm = govnocodeToUnicode(MEMORY);
+  for i in range(size):
+    print(f"|{mm[i]}|", end=" ");
+  if (kwargs.get("lf")):
+    print();
+
+def memDumpUnicode00(MEMORY, size, **kwargs):
+  tx = "";
+  mm = govnocodeToUnicode(MEMORY);
+  for ix, i in enumerate(range(size)):
+    tx += f"|{mm[i]: >3}|";
+    if (ix % 10 == 9):
+      tx += "\n"
+  if (kwargs.get("lf")):
+    tx += "\n";
+  return tx;
+
+# Function to put list of data into the memory
+def memPut(MEMORY, ldata, stid):
+  for ix, el in enumerate(ldata):
+    MEMORY[stid+ix] = el;
+  return MEMORY;
+
+def govnocodeToUnicode(l: list):
+  for i, j in enumerate(l):
+    l[i] = govnocodePage00[j];
+  return l;
+
+def govnocodeToUnicode00(c: str):
+  return govnocodePage00[c];
+
+# Function to wipe the memory
+def memorySysWipe(MEMORY):
+  memsize = len(MEMORY);
+  MEMORY = [0 for i in range(memsize)];
+  return MEMORY;
+
+def sysInstallBasic(MEMORY):
+  installationProcess = [0x01, 0x03, 0x07, 0x01, 0x01, 0x03, 0x07, 0x27, 0x2E, 0x2C, 0x24, 0x07, 0x01, 0x02, 0x03, 0x25, 0x28, 0x2B, 0x24, 0x1F, 0x33, 0x03, 0x07, 0x03, 0x16, 0x19, 0x02, 0x01, 0x03, 0x07, 0x27, 0x2E, 0x2C, 0x24, 0x07, 0x23, 0x28, 0x31, 0x07, 0x01, 0x01, 0x02, 0x07, 0x20, 0x07, 0x01, 0x3A];
+  return memPut(MEMORY, installationProcess, 0);
+
+def sysInstallDebugGovnocode(MEMORY):
+  installationProcess = [i+1 for i in range(49)];
+  return memPut(MEMORY, installationProcess, 0);
+
+def sysScreenUpdate():
+  print(" "*5000);
+
+def sysGovnSh(CVWD):
+  global govnosExit;
+  govnshCommand = "";
+  govnshCList = [];
+  govnshExit = False;
+  while (not govnshExit):
+    pk = readord();
+    addinfo = False;
+    addinfoA = [];
+    print00(">>\n");
+    if ((pk in range(97, 123)) or (pk in range(65, 91)) or (pk in range(48, 58)) or (pk in range(33, 39)) or (pk in range(40, 43)) or pk in [44, 46, 47]):
+      govnshCommand += chr(pk);
+    elif (pk == 45):
+      govnshCommand += "-";
+    elif (pk == [27, 116]):
+      govnshCommand += "þ";
+    elif (pk == [27, 84]):
+      govnshCommand += "Þ";
+    elif (pk == 32):
+      govnshCommand += " ";
+    elif (pk == 10):
+      print00("\n"); # Спустить копыта и выполнить команду
+      govnshCList.append(govnshCommand);
+      # Чел сделай чтобы работало всё
+      if (govnshCommand == "help"):
+        print("Use `help 0` to read the manual");
+      elif (govnshCommand.startswith("help ")):
+        addinfoA = True;
+        addinfo = sysManual(page=govnshCommand.split()[1]);
+      elif (govnshCommand.startswith("time ")):
+        addinfoA = True
+        gcarg = govnshCommand.split()[1];
+        dt = datetime.datetime.now();
+        if (gcarg == "-t"):
+          addinfo = f"{dt.hour}:{dt.minute}:{dt.second}";
+      elif (govnshCommand == "wd"):
+        addinfoA = True;
+        addinfo = CVWD;
+      elif (govnshCommand == "shutdown"):
+        govnshExit = True;
+      elif (govnshCommand == "he"):
+        addinfoA = True;
+        print(CVWD);
+        addinfo = "\n".join(fsParseHe(MEMORY, CVWD)[0]);
+      elif (govnshCommand == "ba"):
+        if (CVWD == "*"):
+          addinfoA = True;
+          addinfo = f"\x1B[32mПОСХАЛКО 1488\x1B[0m";
+        else:
+          CVWD = "*".join(CVWD[:-1].split("*")[:-1])+"*";
+      elif (govnshCommand == "logout"):
+        govnshExit = True;
+      elif (govnshCommand.startswith("to ")):
+        addinfoA = True;
+        gpath = govnshCommand.split()[-1];
+        if (gpath in list(map(lambda a: a[len(CVWD):], fsParseHe(MEMORY, CVWD)[1]))):
+          CVWD += gpath;
+          addinfo = f"\x1B[32mMoved to the folder {gpath}\x1B[0m";
+        else:
+          addinfo = f"\x1B[31mFolder not found: {govnshCommand.split()[-1]}\x1B[0m";
+      elif (govnshCommand.startswith("sys.memdump")):
+        addinfoA = True;
+        if (govnshCommand.startswith("sys.memdump -u")):
+          addinfoA = True;
+          if (govnshCommand.split()[-1].isdigit()):
+            print(govnshCommand.split());
+            addinfo = memDumpUnicode00(copy(MEMORY), int(govnshCommand.split()[-1]));
+          else:
+            addinfo = memDumpUnicode00(copy(MEMORY), 20);
+        else:
+          addinfo = memDump00(MEMORY, 20);
+          if (govnshCommand.split()[-1].isdigit()):
+            addinfo = memDump00(MEMORY, int(govnshCommand.split()[-1]));
+          else:
+            addinfo = memDump00(MEMORY, 20);
+      govnshCommand = "";
+    elif (pk == 127):
+      if (govnshCommand):
+        govnshCommand = govnshCommand[:-1];
+    elif (pk == [27, 27]): # ГовноШелл посылается нахер
+      govnshExit = True;
+      govnosExit = True;
+    else:
+      print00("\n\x1B[31m>> Unknown key! <<\x1B[0m");
+    if (addinfoA):
+      printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
+    else:
+      printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}"], screenLength);
+  print(govnshCList);
+  return govnshCList;
+
+# Function to halt before some event
+def sysHalt(event, **kwargs):
+  if (event == 0):
+    k = 0;
+    while (k != kwargs["haltkey"]):
+      k = readord();
+
+# Filesystem things
+def fsParseHe(MEMORY, CVWD): # MEMORY[pos] is current parsed byte
+  pos = 0;
+  fsn = "";
+  foldsFound = [];
+  filesFound = [];
+  while (MEMORY[pos] != 0x3A): # AAA: Не забыть поменять когда будет больше символов в кодировке
+    print(f"\x1B[32mFolders: {foldsFound}, {filesFound}. Pos: {pos}\x1B[0m");
+    if (MEMORY[pos] == 0x01): # найдена папка
+      fsn = "";
+      pos += 2; # перейти в начало пути папки
+      while (MEMORY[pos] != 0x01):
+        fsn += govnocodeToUnicode00(MEMORY[pos]);
+        pos += 1;
+      foldsFound.append(fsn);
+      fsn = "";
+      pos += 1;
+    elif (MEMORY[pos] == 0x02): # найден файл
+      pos += 2;
+      fsn = ["", ""];
+      while (MEMORY[pos] != 0x03):
+        fsn[0] += govnocodeToUnicode00(MEMORY[pos]);
+        pos += 1;
+      pos += 1;
+      while (MEMORY[pos] != 0x03):
+        fsn[1] += govnocodeToUnicode00(MEMORY[pos]);
+        pos += 1;
+      pos += 1;
+      if (fsn[1] == CVWD):
+        filesFound.append(fsn[0]);
+        fsn = "";
+      while (MEMORY[pos] != 0x02):
+        pos += 1;
+      pos += 1;
+    else:
+      print(f"\x1B[31mЧто это за хрень? -> {MEMORY[pos]}. Позиция {pos} btw\x1B[0m");
+  foldsNeeded = [f"Data in {CVWD}:"]+(list(map(lambda a: "  "+a, getFolds(foldsFound, CVWD))))+list(map(lambda a: "  "+a, filesFound));
+  print(f"\x1B[32m{foldsNeeded}\x1B[0m");
+  return foldsNeeded, foldsFound;
+
+# Turn on the machine (load memory)
+MEMORY, MEMORYD, MEMORYC, MEMORYSD = memLoad();
+
+print("GovnOS System A0.11");
+print("Loading...");
+print(f"  MEMORY {len(MEMORY)} bytes +");
+print(f"  MEMORY {len(MEMORYD)} bytes +");
+print(f"  MEMORY {len(MEMORYC)} bytes +");
+print(f"  MEMORY {len(MEMORYSD)} bytes");
+print("\nGovnOS loaded!");
+
+print("\nPress Escape,C to start TyGovno command mode");
+
+# Check if OS is installed
+if not MEMORY[0]:
+  print("\nInstallation started...");
+  MEMORY = sysInstallBasic(MEMORY);
+  print("Installation finished! You can use your OS now.");
+
+# MEMORY = sysInstallDebugGovnocode(MEMORY);
+
+while (not govnosExit):
+  k = readord();
+  if ((k == [27, 67]) or (k == [27, 99])):
+    print("\nLoading TyGovno...");
+    print("TyGovno loaded!");
+    print("Use `help 0` to get help");
+    govnshCList = sysGovnSh(CVWD);
+  elif (k == [27, 27]):
+    govnosExit = True;
+# ssHalt(0, haltkey=10);
+
+# MEMORY = memorySysWipe(MEMORY);
+memDumpUnicode(copy(MEMORY), 55, lf=True);
+
+# Shutting down (saving memory)
+print("Shutting down...");
+
+# Сохраняем память
+memSave(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
+
+# Сохраняем историю комманд в терминале
+with open("./memory/govnCList.dat", "w") as fl:
+  print(govnshCList);
+  fl.write("\n".join(govnshCList));
+
+sys.exit(61);
+

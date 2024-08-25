@@ -1,0 +1,10 @@
+GovnOS Manual page 0
+Use `help 1` to go to the next page
+
+Key combination are written like this:
+  Alt(S),Escape,T
+will mean
+  Press Alt+S, then Escape, then T
+
+Use Escape,Escape to shut down.
+
