@@ -1,0 +1,7 @@
+func(MEMORY, conf) -> MEMORY*(conf):
+  addConfFiles -> MEMORY // Add empty configuration files
+  print "  Configuration started..."
+  fillConfFiles conf -> MEMORY // Configure
+  print "  Configuration finished..."
+  return <- MEMORY
+

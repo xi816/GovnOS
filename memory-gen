@@ -2,6 +2,14 @@
 
 from sys import argv;
 
+if (len(argv) == 6):
+  if (argv[5] != "-f"):
+    if (input("Are you sure?: ").upper() != "Y"):
+      exit(0);
+else:
+  if (input("Are you sure?: ").upper() != "Y"):
+    exit(0);
+
 with open("./memory/mem.dat", "w") as fl:
   fl.write("\0"*int(argv[1]));
 

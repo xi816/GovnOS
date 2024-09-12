@@ -1,0 +1,18 @@
+GovnOS installation guide manual
+
+1. User
+Add a user to use in GovnOS
+$ adduser
+  Enter user: USER
+  Add a password: 1234
+  Add? (Y/N, default: Y): Y
+
+2. Configuration
+Now, generate the config files
+$ config-gen
+
+3. Finish
+That's it! GovnOS is now installed and you can shut it
+down.
+$ exit
+Then run it again using ./run

@@ -1,0 +1,15 @@
+*
+  *BOOT*
+    *BOOT*START.C
+      "" # TODO
+  *HOME*
+  *GROUP*
+    *GROUP*PERMS.C
+      "411 DO*1*"
+    *GROUP*USERS.C
+      "ROOT"
+    *GROUP*GRP.C
+      "DO*USER*"
+  *PROG*
+  *TMP*
+
