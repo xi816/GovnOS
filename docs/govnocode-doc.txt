@@ -58,4 +58,3 @@ GovnoCode:
   38 -> .QCY, Y
   39 -> .QCZ, Z
   3A -> .EOF, (EOF)
-
