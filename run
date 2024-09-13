@@ -1,3 +1,2 @@
 #!/usr/bin/bash
-/home/bulka/myvenv/bin/python3.12 src/main.img
-
+/home/bulka/myvenv/bin/python3.12 src/main.img -d $1

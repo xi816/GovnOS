@@ -6,15 +6,21 @@ import sys;
 import datetime;
 import readchar;
 from copy import copy;
+from time import sleep;
 
 # Плюшки
 arp = 0;
 screenLength = os.get_terminal_size().lines-1;
 screenWidth = os.get_terminal_size().columns;
+drive = "DRV";
 govnosExit = False;
 while (arp < len(sys.argv)):
 	if (sys.argv[arp] == "-s"):
 		screenLength = int(sys.argv[arp+1]);
+		arp += 1;
+	elif (sys.argv[arp] == "-d"):
+		drive = sys.argv[arp+1];
+		arp += 1;
 	arp += 1;
 if (screenLength == None):
 	print("\x1B[31mЧел длину экрана укажи потом работать начну\x1B[0m");
@@ -100,10 +106,10 @@ def readord():
 	return splitlsj(k) if len(k) > 1 else ord(k[0]);
 
 # Function to load memory from the host hard drive
-def memLoad():
+def memLoad(drive):
 	rl = [];
 	try:
-		with open("./memory/mem.dat", "r") as fl:
+		with open(f"./memory/{drive}/mem.dat", "r") as fl:
 			mm = fl.read();
 			if (mm):
 				rl.append(splitlsj(mm));
@@ -112,7 +118,7 @@ def memLoad():
 	except:
 		sysSOD("0x00000001");
 	try:
-		with open("./memory/memd.dat", "r") as fl:
+		with open(f"./memory/{drive}/memd.dat", "r") as fl:
 			mm = fl.read();
 			if (mm):
 				rl.append(splitlsj(mm));
@@ -121,16 +127,16 @@ def memLoad():
 	except:
 		sysSOD("0x00000002", 1);
 	try:
-		with open("./memory/memc.dat", "r") as fl:
+		with open(f"./memory/{drive}/memc.dat", "r") as fl:
 			mm = fl.read();
 			if (mm):
 				rl.append(splitlsj(mm));
 			else:
 				rl.append([0 for i in range(1984)]);
 	except:
-		sysSOD("0x00000002, 1");
+		sysSOD("0x00000002", 1);
 	try:
-		with open("./memory/memsd.dat", "r") as fl:
+		with open(f"./memory/{drive}/memsd.dat", "r") as fl:
 			mm = fl.read();
 			if (mm):
 				rl.append(splitlsj(mm));
@@ -142,13 +148,13 @@ def memLoad():
 
 # Function to save memory to the host hard drive
 def memSave(MEM, MEMD, MEMC, MEMSD):
-	with open("./memory/mem.dat", "w") as fl:
+	with open(f"./memory/{drive}/mem.dat", "w") as fl:
 		fl.write(strifyj(MEMORY));
-	with open("./memory/memd.dat", "w") as fl:
+	with open(f"./memory/{drive}/memd.dat", "w") as fl:
 		fl.write(strifyj(MEMORYD));
-	with open("./memory/memc.dat", "w") as fl:
+	with open(f"./memory/{drive}/memc.dat", "w") as fl:
 		fl.write(strifyj(MEMORYC));
-	with open("./memory/memsd.dat", "w") as fl:
+	with open(f"./memory/{drive}/memsd.dat", "w") as fl:
 		fl.write(strifyj(MEMORYSD));
 	print(f"MEM: {MEMORY[:55]}");
 
@@ -199,6 +205,9 @@ def govnocodeToUnicode(l: list):
 
 def govnocodeToUnicode00(c: str):
 	return govnocodePage00[c];
+
+def govnocodeToUnicode01(l: list):
+	return "".join(govnocodeToUnicode(l));
 
 def unicodeToGovnocodeDir(l: str):
 	l = list(l);
@@ -289,7 +298,7 @@ def sysInstallBasic(MEMORY, username: str, password: list, hostname: str):
 	mem, stid = memPut(MEMORY, installationProcess01, stid);
 	mem, stid = memPut(MEMORY, hostname, stid);
 	mem, stid = memPut(MEMORY, installationProcess02, stid);
-	return mem
+	return mem;
 
 def sysScreenUpdate():
 	print(" "*5000);
@@ -346,7 +355,7 @@ def sysGovnSh(CVWD):
 				gpath = govnshCommand.split()[-1];
 				print(CVWD);
 				MEMORY = memTouch(copy(MEMORY), CVWD, gpath, 1);
-				addinfo = f"\x1B[32mCreated the file {gpath}\x1B[0m";
+				addinfo = f"\x1B[32mCreated the dir {gpath}\x1B[0m";
 			elif (govnshCommand == "ba"):
 				if (CVWD == "*"):
 					addinfoA = True;
@@ -388,11 +397,62 @@ def sysGovnSh(CVWD):
 		else:
 			print00("\n\x1B[31m>> Unknown key! <<\x1B[0m");
 		if (addinfoA):
-			printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
+			# printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
+			printScr([f">> {govnshCommand}_", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
 		else:
-			printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}"], screenLength);
-	print(govnshCList);
+			# printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}"], screenLength);
+			printScr([f">> {govnshCommand}_", f"Key pressed: {pk}"], screenLength);
 	return govnshCList;
+
+def sysGravno(CVWD):
+	gravnoComm = "";
+	gravnomode = True;
+	scr = [""]*(screenLength-7);
+	# Gravno states:
+	# 0 -- Normal
+	# 1 -- Command
+	gravnostate = 0;
+	k = readord();
+
+	while (gravnomode):
+		tm = datetime.datetime.now();
+		tmf = f"{tm.hour:0>2}:{tm.minute:0>2}";
+		tmf00 = "GovnOS 0.9";
+		tmf = ("{:}{: >"+f"{screenWidth-len(tmf00)}"+"}").format(tmf00, tmf);
+		printScr([
+			tmf,
+			"-"*screenWidth,
+			f"{k}"
+			]+scr+[
+			"-"*screenWidth,
+			gravnoComm+["@", "_"][gravnostate],
+			"-"*screenWidth,
+			"^(A)=Comm ^(W)=Term"
+		], screenLength);
+		k = readord();
+		if (gravnostate == 0):
+			if (k == [27, 81]):
+				gravnomode = False;
+			elif (k == 1):
+				gravnostate = 1;
+			elif (k == 8):
+				scr = [""]*(screenLength-7);
+			elif (k == 23):
+				scr[0] = "Terminal";
+		elif (gravnostate == 1):
+			if (k == 1):
+				gravnostate = 0;
+			elif ((k in range(97, 123)) or (k in range(65, 91)) or (k in range(48, 58)) or (k in [32])):
+				gravnoComm += chr(k);
+			elif (k == 10):
+				if (gravnoComm.split(" ")[0] == "echo"):
+					scr[int(gravnoComm.split(" ")[1])] = " ".join(gravnoComm.split(" ")[2:]);
+				gravnoComm = "";
+				gravnostate = 0;
+			elif (k == 127):
+				if (gravnoComm):
+					gravnoComm = gravnoComm[:-1];
+	return 0;
 
 # Function to halt before some event
 def sysHalt(event, **kwargs):
@@ -454,21 +514,16 @@ def fsReadFile(MEMORY, CVWD, FIN):
 			fins00 = "";
 			pos += 2; # start of filename
 			while (MEMORY[pos] != 0x03):
-				print(govnocodeToUnicode00(MEMORY[pos]), fins, fins00);
 				fins00 += govnocodeToUnicode00(MEMORY[pos]);
 				pos += 1;
 			pos += 1;
 			while (MEMORY[pos] != 0x03):
-				print(govnocodeToUnicode00(MEMORY[pos]), fins, fins00);
 				fins += govnocodeToUnicode00(MEMORY[pos]);
 				pos += 1;
 			pos += 1;
-			print(govnocodeToUnicode(MEMORY[pos:pos+10]));
 			if (fins+fins00 == CVWD+FIN): # если это тот самый файл
 				while (MEMORY[pos] != 0x02):
-					print(f"\x1B[32m{fins}{fins00}. {CVWD}{FIN}. Pos: {pos}\x1B[0m");
 					ins.append(MEMORY[pos]);
-					print(f"\x1B[32mFile container: {ins}. Pos: {pos}\x1B[0m");
 					pos += 1;
 				finished = True;
 			else:
@@ -483,8 +538,14 @@ def fsReadFile(MEMORY, CVWD, FIN):
 		else:
 			memDump(MEMORY, 100);
 			print(f"\x1B[31mЧто это за хрень? -> {MEMORY[pos]}. Позиция {pos} btw\x1B[0m");
-	print(f"\x1B[32m{fins}\x1B[0m");
 	return ins;
+
+def sysReadSece(s: str):
+	s = s.split(" ");
+	ss = dict();
+	for i,j in enumerate(s):
+		ss[s[i].split(":")[0]] = s[i].split(":")[1];
+	return ss;
 
 def sysShutdown(M, MD, MC, MSD, exit=False):
 	print("Shutting down...");
@@ -493,9 +554,9 @@ def sysShutdown(M, MD, MC, MSD, exit=False):
 		sys.exit(41);
 
 # Turn on the machine (load memory)
-MEMORY, MEMORYD, MEMORYC, MEMORYSD = memLoad();
+MEMORY, MEMORYD, MEMORYC, MEMORYSD = memLoad(drive);
 
-print("GovnOS 0.7");
+print("GovnOS 0.9");
 print("Loading...");
 print(f"  MEMORY {len(MEMORY)} bytes +");
 print(f"  MEMORY {len(MEMORYD)} bytes +");
@@ -504,11 +565,11 @@ print(f"  MEMORY {len(MEMORYSD)} bytes");
 print("\nGovnOS loaded!");
 
 graphicsStart = "|----------------------------------|";
-graphicsMaster = "|  GovnOS 0.7 installation master  |";
+graphicsMaster = "|  GovnOS 0.9 installation master  |";
 graphicsEmpty = "|                                  |";
 
 # OS installation if it's not installed
-in00 = {"host": "GOVNOS"};
+in00 = {"host": "GOVNOS", "drive": "DRV"};
 if not MEMORY[0]:
 	print("\nInstallation started...");
 
@@ -563,11 +624,16 @@ if not MEMORY[0]:
 print("\nStarting GovnoDiM...");
 usr00 = input("User: ");
 usr01 = input("Password: ");
-# TODO: Check if password is valid
+
+while (sysReadSece(govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "SECE.C"))).get(usr00) != usr01):
+	print("Incorrect login or password!");
+	usr00 = input("User: ");
+	usr01 = input("Password: ");
 
 CUSR = usr00; # Enter to the system
 
 print("\nPress Escape,C to start TyGovno command mode");
+print("Press Escape,G to start Gravno graphics mode");
 
 govnshCList = [];
 
@@ -579,6 +645,14 @@ while (not govnosExit):
 		print("TyGovno loaded!");
 		print("Use `help 0` to get help");
 		govnshCList = sysGovnSh(CVWD);
+		print("\nPress Escape,C to start TyGovno command mode");
+		print("Press Escape,G to start Gravno graphics mode");
+	elif ((k == [27, 71]) or (k == [27, 103])):
+		print("\nLoading Gravno...");
+		print("Gravno loaded!");
+		sysGravno(CVWD);
+		print("\nPress Escape,C to start TyGovno command mode");
+		print("Press Escape,G to start Gravno graphics mode");
 	elif (k == [27, 27]):
 		govnosExit = True;
 
@@ -592,8 +666,7 @@ sysShutdown(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
 memSave(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
 
 # Сохраняем историю комманд в терминале
-with open("./memory/govnCList.dat", "w") as fl:
-	print(govnshCList);
+with open(f"./memory/{drive}/govnCList.dat", "w") as fl:
 	fl.write("\n".join(govnshCList));
 
 sys.exit(61);
