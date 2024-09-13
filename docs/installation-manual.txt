@@ -7,12 +7,22 @@ $ adduser
   Add a password: 1234
   Add? (Y/N, default: Y): Y
 
-2. Configuration
+2. Root
+Change the root password
+$ passwd
+  Enter new root password: 69420
+
+3. Hostname
+Change the hostname to what you want
+$ hostname
+  Enter hostname: POCO
+
+4. Configuration
 Now, generate the config files
 $ config-gen
 
-3. Finish
+5. Finish
 That's it! GovnOS is now installed and you can shut it
 down.
 $ exit
-Then run it again using ./run
+Then run it again using ./run DRIVENAME
