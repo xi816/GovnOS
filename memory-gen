@@ -13,7 +13,7 @@ else:
 
 drive = argv[1];
 
-system(f"mkdir -p ./memory/{drive}/");
+# system(f"mkdir -p ./memory/{drive}/");
 
 with open(f"./memory/{drive}/mem.dat", "w") as fl:
   fl.write("\0"*int(argv[2]));
