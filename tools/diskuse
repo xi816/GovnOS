@@ -1,0 +1,18 @@
+#!/usr/bin/python3
+# Tool for GovnOS to know how much memory is used.
+
+import sys;
+
+nhex = lambda a: "0x"+hex(a)[2:].upper();
+
+name = sys.argv[1];
+GC_EOF = 0x3A; # Change when new GovnoCode standart will exist.
+
+with open(f"./memory/{name}/mem.dat", "rb") as fl:
+	s = list(map(ord, fl.read().decode()));
+
+for i,j in enumerate(s):
+	if (j == GC_EOF):
+		print(f"Used: {nhex(i)} of {nhex(len(s))}");
+		print(f"Used: {i} of {len(s)}");
+		exit(0);

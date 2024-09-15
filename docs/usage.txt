@@ -1,0 +1,27 @@
+How to use GovnOS
+
+1. Starting the GovnOS operating system
+To start GovnOS, simply type ./run DRVNAME in the terminal.
+Installation manual is provided in docs/installation-manual.txt
+Then log in with your username and password.
+
+2. Modes
+The default state (mode) for GovnOS is Normal.
+You can launch other modes from here.
+To open Terminal mode, press Esc,C.
+To open Graphical mode (in develompent), press Esc,G.
+To shutdown, press Esc,Esc.
+
+3. Terminal mode
+In Terminal mode you can write commands.
+To show current directory path, write `wd`.
+To show files and directories in the current directory, type `he`.
+To go into a directory, write `to NAME*`.
+To go back one directory, write `ba`.
+To load a program into memory (4. Program installation),
+use `load PROG*NAME*`. Each program is stored in *PROG*NAME*,
+and the file that loads into memory is stored in *PROG*NAME*ST.X
+
+4. Program installation
+To install a program from lib repositories, use `fnm -l name`.
+To install a program from other people, use `fnm -i user name`.

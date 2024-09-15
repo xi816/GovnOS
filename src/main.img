@@ -1,5 +1,6 @@
-# Говнокод OFF
-# Говнокод ON
+# GovnOS source code.
+# See version in the file VERSION.
+# See installation manual in docs/installation-manual.txt
 
 import os;
 import sys;
@@ -7,20 +8,25 @@ import datetime;
 import readchar;
 from copy import copy;
 from time import sleep;
+from dbgtools import *;
 
-# Плюшки
 arp = 0;
 screenLength = os.get_terminal_size().lines-1;
 screenWidth = os.get_terminal_size().columns;
 drive = "DRV";
 govnosExit = False;
 
+# Default run config
 SHBUFSZ = 1024;
 EBADCOL = 3;
 ECRITCOL = 0;
+DBGMODE = False;
 while (arp < len(sys.argv)):
 	if (sys.argv[arp] == "-s"):
 		screenLength = int(sys.argv[arp+1]);
+		arp += 1;
+	elif (sys.argv[arp] == "-sw"):
+		screenWidth = int(sys.argv[arp+1]);
 		arp += 1;
 	elif (sys.argv[arp] == "-d"):
 		drive = sys.argv[arp+1];
@@ -34,10 +40,9 @@ while (arp < len(sys.argv)):
 	elif (sys.argv[arp] == "-2s"):
 		SHBUFSZ = int(sys.argv[arp+1]);
 		arp += 1;
+	elif (sys.argv[arp] == "-D"):
+		DBGMODE = True;
 	arp += 1;
-if (screenLength == None):
-	print("\x1B[31mЧел длину экрана укажи потом работать начну\x1B[0m");
-	sys.exit(1);
 
 shbuf = [0 for i in range(SHBUFSZ)];
 
@@ -47,8 +52,9 @@ MEMORYD = [0 for i in range(1024)]; # ram
 MEMORYC = [0 for i in range(1984)]; # program
 MEMORYSD = [0 for i in range(64)]; # legacy ram
 
-# Бинды кодировки
-GC_EOF = 0x3A; # AAA: Не забыть поменять когда будет больше символов в кодировке
+# GovnoCode binds
+GC_EOF = 0x3A; # Change when GovnoCode will have a new standart
+if (DBGMODE): dbg_print(f"GovnoCode EOF is set to: {nhex(GC_EOF)}");
 
 CVWD = "*";
 CUSR = "";
@@ -334,6 +340,10 @@ def sysInstallBasic(MEMORY, username: str, password: list, hostname: str):
 def sysScreenUpdate():
 	print(" "*5000);
 
+def contAddr(MEMORY, FILEDIR, FILENAME):
+	filestart, namestart, dirstart, insstart = fsReadFile(MEMORY, FILEDIR, FILENAME)[2:6];
+	return filestart, namestart, dirstart, insstart;
+
 def sysGovnSh(CVWD):
 	global govnosExit, MEMORY;
 	govnshCommand = "";
@@ -380,7 +390,7 @@ def sysGovnSh(CVWD):
 				addinfo = "\n".join(fsParseHe(MEMORY, CVWD)[0]);
 			elif (govnshCommand.startswith("inside ")):
 				addinfoA = True;
-				retcode, container = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1])
+				retcode, container = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1])[:2];
 				if (not retcode):
 					addinfo = "".join(govnocodeToUnicode(container));
 				elif (retcode == 1):
@@ -398,11 +408,40 @@ def sysGovnSh(CVWD):
 			elif (govnshCommand == "ba"):
 				if (CVWD == "*"):
 					addinfoA = True;
-					addinfo = f"\x1B[32mПОСХАЛКО 1488\x1B[0m";
+					addinfo = f"\x1B[32mPOSHALKO 1488\x1B[0m";
 				else:
 					CVWD = "*".join(CVWD[:-1].split("*")[:-1])+"*";
-			elif (govnshCommand == "logout"):
+			elif (govnshCommand == "exit"):
 				govnshExit = True;
+			elif (govnshCommand.startswith("ren")):
+				gpath = govnshCommand.split()[1:];
+				if (len(gpath) != 2):
+					addinfoA = True;
+					addinfo = "\x1B[31mren requires 2 arguments\x1B[0m";
+				else:
+					contaddrs = fsReadFile(MEMORY, CVWD, gpath[0]);
+					print(contaddrs, CVWD, gpath[0]);
+					contaddrs00 = contaddrs[0];
+					contaddrs = contaddrs[2:6];
+					if (contaddrs00 == 1):
+						addinfoA = True;
+						addinfo = f"\x1B[31mFile {gpath[0]} not found\x1B[0m";
+					elif (len(gpath[1]) < len(gpath[0])):
+						for i,j in enumerate(gpath[1]):
+							MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
+						for j in range(len(gpath[0])-len(gpath[1])):
+							MEMORY.pop(contaddrs[1]+i+1);
+						MEMORY += [0 for i in range(len(gpath[0])-len(gpath[1]))];
+					elif (len(gpath[1]) == len(gpath[0])):
+						for i,j in enumerate(gpath[0]):
+							MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
+					else:
+						for i,j in enumerate(gpath[0]):
+							MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
+						i = len(gpath[0]);
+						for j in range(len(gpath[1])-len(gpath[0])):
+							MEMORY.insert(contaddrs[1]+i+j, unicodeToGovnocodeDir(gpath[1][i+j])[0]);
+						MEMORY = MEMORY[:-(len(gpath[1])-len(gpath[0]))];
 			elif (govnshCommand.startswith("to ")):
 				addinfoA = True;
 				gpath = govnshCommand.split()[-1];
@@ -430,16 +469,14 @@ def sysGovnSh(CVWD):
 		elif (pk == 127):
 			if (govnshCommand):
 				govnshCommand = govnshCommand[:-1];
-		elif (pk == [27, 27]): # ГовноШелл посылается нахер
+		elif (pk == [27, 27]):
 			govnshExit = True;
 			govnosExit = True;
 		else:
 			print00("\n\x1B[31m>> Unknown key! <<\x1B[0m");
 		if (addinfoA):
-			# printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
 			printScr([f">> {govnshCommand}_", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
 		else:
-			# printScr([f">> {govnshCommand}\x1B[47m \x1B[0m", f"Key pressed: {pk}"], screenLength);
 			printScr([f">> {govnshCommand}_", f"Key pressed: {pk}"], screenLength);
 	return govnshCList;
 
@@ -456,7 +493,7 @@ def sysGravno(CVWD):
 	while (gravnomode):
 		tm = datetime.datetime.now();
 		tmf = f"{tm.hour:0>2}:{tm.minute:0>2}";
-		tmf00 = "GovnOS 0.91 (beta 1)";
+		tmf00 = "GovnOS 1.10";
 		tmf = ("{:}{: >"+f"{screenWidth-len(tmf00)}"+"}").format(tmf00, tmf);
 		printScr([
 			tmf,
@@ -537,7 +574,7 @@ def fsParseHe(MEMORY, CVWD): # MEMORY[pos] is current parsed byte
 				pos += 1;
 			pos += 1;
 		else:
-			print(f"\x1B[31mЧто это за хрень? -> {MEMORY[pos]}. Позиция {pos} btw\x1B[0m");
+			print(f"\x1B[31mUnknown symbol found while folder parsing -> {MEMORY[pos]}. {pos}\x1B[0m");
 	foldsNeeded = [f"Data in {CVWD}:"]+(list(map(lambda a: "  "+a, getFolds(foldsFound, CVWD))))+list(map(lambda a: "  "+a, filesFound));
 	print(f"\x1B[32m{foldsNeeded}\x1B[0m");
 	return foldsNeeded, foldsFound;
@@ -548,24 +585,33 @@ def fsReadFile(MEMORY, CVWD, FIN):
 	fins = "";
 	fins00 = "";
 	finished = False;
+	FILEADDR = 69420;
+	NAMEADDR = 69420;
+	DIRADDR = 69420;
+	INSADDR = 69420;
 	while ((MEMORY[pos] != GC_EOF)):
 		if (MEMORY[pos] == 0x02):
+			FILEADDR = pos;
 			fins = "";
 			fins00 = "";
 			pos += 2; # start of filename
+			NAMEADDR = pos;
 			while (MEMORY[pos] != 0x03):
 				fins00 += govnocodeToUnicode00(MEMORY[pos]);
 				pos += 1;
 			pos += 1;
+			DIRADDR = pos;
 			while (MEMORY[pos] != 0x03):
 				fins += govnocodeToUnicode00(MEMORY[pos]);
 				pos += 1;
 			pos += 1;
-			if (fins+fins00 == CVWD+FIN): # если это тот самый файл
+			print(fins+fins00);
+			if (fins+fins00 == CVWD+FIN): # found the file
+				INSADDR = pos;
 				while (MEMORY[pos] != 0x02):
 					ins.append(MEMORY[pos]);
 					pos += 1;
-				return 0, ins;
+				return 0, ins, FILEADDR, NAMEADDR, DIRADDR, INSADDR;
 			else:
 				while (MEMORY[pos] != 0x02):
 					pos += 1;
@@ -576,8 +622,8 @@ def fsReadFile(MEMORY, CVWD, FIN):
 				pos += 1;
 			pos += 1;
 		else:
-			print(f"\x1B[31mЧто это за хрень? -> {MEMORY[pos]}. Позиция {pos} btw\x1B[0m");
-	return 1, ins;
+			print(f"\x1B[31m-> {MEMORY[pos]}. {pos}\x1B[0m");
+	return 1, ins, 69420, 69420, 69420, 69420;
 
 def sysReadSece(s: str):
 	s = s.split(" ");
@@ -592,19 +638,14 @@ def sysShutdown(M, MD, MC, MSD, exit=False):
 	if (exit):
 		sys.exit(41);
 
+def Govnasm(M, MD, MC, MSD):
+	return 0;
+
 # Turn on the machine (load memory)
 MEMORY, MEMORYD, MEMORYC, MEMORYSD = memLoad(drive);
 
-print("GovnOS 1.0 (0.100)");
-print("Loading...");
-print(f"  MEMORY {len(MEMORY)} bytes +");
-print(f"  MEMORY {len(MEMORYD)} bytes +");
-print(f"  MEMORY {len(MEMORYC)} bytes +");
-print(f"  MEMORY {len(MEMORYSD)} bytes");
-print("\nGovnOS loaded!");
-
 graphicsStart = "|----------------------------------|";
-graphicsMaster = "|  GovnOS 1.0 installation master  |";
+graphicsMaster = "|  GovnOS 1.1 installation master  |";
 graphicsEmpty = "|                                  |";
 
 # OS installation if it's not installed
@@ -660,6 +701,17 @@ if not MEMORY[0]:
 				print("  GovnFS installed!");
 				print("  Filesystem built!");
 
+hostname = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "HOST")[1])
+
+print("GovnOS 1.10 (0.110)");
+print("Loading...");
+print(f"  MEMORY {len(MEMORY)} bytes +");
+print(f"  MEMORY {len(MEMORYD)} bytes +");
+print(f"  MEMORY {len(MEMORYC)} bytes +");
+print(f"  MEMORY {len(MEMORYSD)} bytes");
+print("\nGovnOS loaded!");
+print(f"Welcome, {hostname}");
+
 print("\nStarting GovnoDiM...");
 usr00 = input("User: ");
 usr01 = input("Password: ");
@@ -704,7 +756,7 @@ while (not govnosExit):
 # Shutting down
 sysShutdown(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
 
-# Сохраняем историю комманд в терминале
+# Saving the terminal history to memory/DRV/govnCList.dat
 with open(f"./memory/{drive}/govnCList.dat", "w") as fl:
 	fl.write("\n".join(govnshCList));
 
