@@ -1,0 +1,12 @@
+GovnSOFS Filesystem Standart:
+
+User -> UID
+	ROOT -> 0
+	USER -> 1
+
+*
+	BOOT*
+	GRP*
+	HOME*
+		DESKTOP*
+	PROG*

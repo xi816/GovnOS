@@ -3,10 +3,9 @@ GovnOS Manual page 1
 Use `time -t` to get current time.
 Use `time -d` to get current date.
 Use `time -D` to get current day.
-Use `time -T` to get current month.
+Use `time -M` to get current month.
 Use `time -Y` to get current year.
 Use `time -H` to get current hour.
-Use `time -M` to get current minute.
+Use `time -m` to get current minute.
 Use `time -S` to get current second.
 Use `time -Ms` to get current millisecond.
-

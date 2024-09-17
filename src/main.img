@@ -80,17 +80,29 @@ def getFolds(folds, CVWD):
 			foldsn.append(fold);
 	return foldsn[1:];
 
-# Колхоз :D
 def printScr(ss: list, scl, colors: list = [""]):
 	if (len(ss) > scl):
-		print("\x1B[31mИди в жопу чел\x1B[0m");
+		print("\x1B[31mError 0x0C80: not enough terminal height\x1B[0m");
+	print("".join(colors), end="");
 	for j in ss:
-		print("".join(colors), end="");
 		fstr00 = "{: <" + str(screenWidth) + "}";
 		print(fstr00.format(j) if len(j)<screenWidth else j[:screenWidth]);
 	ssl = len(ss);
 	while (ssl != scl):
 		print();
+		ssl += 1;
+
+def printScr00(ss: list, scl, colors: list = [""]):
+	if (len(ss) > scl):
+		print("\x1B[31mError 0x0C00: not enough terminal height\x1B[0m");
+	print("".join(colors), end="");
+	print("\x1B[A"*scl, end="");
+	for j in ss:
+		fstr00 = "{: <" + str(screenWidth) + "}";
+		print(fstr00.format(j) if len(j)<screenWidth else j[:screenWidth]);
+	ssl = len(ss);
+	while (ssl != scl):
+		print(" "*screenWidth);
 		ssl += 1;
 
 def sysSOD(errorcode, col=0):
@@ -344,11 +356,181 @@ def contAddr(MEMORY, FILEDIR, FILENAME):
 	filestart, namestart, dirstart, insstart = fsReadFile(MEMORY, FILEDIR, FILENAME)[2:6];
 	return filestart, namestart, dirstart, insstart;
 
+def sysExecLine(MEMORY, CVWD, govnshCommand):
+	gpath = govnshCommand.split();
+	addinfoA = False;
+	addinfo = "";
+	print(gpath);
+	govnshExitCode = 0;
+	if (gpath[0] == "help"):
+		if ((len(gpath) == 2) and (gpath[1].isdigit())):
+			addinfoA = True;
+			addinfo = sysManual(page=govnshCommand.split()[1]);
+		elif (len(gpath) == 1):
+			addinfoA = True;
+			addinfo = "Use `help 0` to read the manual";
+		else:
+			addinfoA = True;
+			addinfo = "\x1B[31mInvalid `help` | Expected 0 or 1 argument\x1B[0m";
+	elif (gpath[0] == "time"):
+		addinfoA = True
+		dt = datetime.datetime.now();
+		if (gpath[1] == "-t"):
+			addinfo = f"{dt.hour}:{dt.minute}:{dt.second}";
+		elif (gpath[1] == "-d"):
+			addinfo = f"{dt.month}.{dt.day}.{dt.year}";
+		elif (gpath[1] == "-D"):
+			addinfo = f"{dt.day}";
+		elif (gpath[1] == "-M"):
+			addinfo = f"{dt.month}";
+		elif (gpath[1] == "-Y"):
+			addinfo = f"{dt.year}";
+		elif (gpath[1] == "-H"):
+			addinfo = f"{dt.hour}";
+		elif (gpath[1] == "-m"):
+			addinfo = f"{dt.minute}";
+		elif (gpath[1] == "-S"):
+			addinfo = f"{dt.second}";
+		elif (gpath[1] == "-Ms"):
+			addinfo = f"{dt.millisecond}";
+	elif (gpath[0] == "wd"):
+		addinfoA = True;
+		if (len(gpath) > 1):
+			addinfo = "\x1B[31mInvalid `wd` | Expected 0 arguments\x1B[0m";
+		else:
+			addinfo = CVWD;
+	elif (gpath[0] == "shutdown"):
+		if (len(gpath) > 1):
+			addinfo = "\x1B[31mInvalid `shutdown` | Expected 0 arguments\x1B[0m";
+		else:
+			govnshExit = True;
+	elif (gpath[0] == "he"):
+		addinfoA = True;
+		if (len(gpath) == 1):
+			addinfo = "\n".join(fsParseHe(MEMORY, CVWD)[0]);
+		elif (len(gpath) == 2):
+			addinfo = "\n".join(fsParseHe(MEMORY, CVWD+govnshCommand.split()[1])[0]);
+		else:
+			addinfo = "\x1B[31mInvalid `he` | Expected 0 or 1 argument\x1B[0m";
+	elif (gpath[0] == "inside"):
+		addinfoA = True;
+		if (len(gpath) == 2):
+			retcode, container = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1])[:2];
+			if (not retcode):
+				addinfo = "".join(govnocodeToUnicode(container));
+			elif (retcode == 1):
+				addinfo = f"\x1B[31mCould not find the file {govnshCommand.split()[1]}\x1B[0m";
+		else:
+			addinfo = "\x1B[31mInvalid `inside` | Expected 1 argument\x1B[0m";
+	elif (gpath[0] == "dir"):
+		addinfoA = True;
+		if (len(gpath) == 2):
+			MEMORY = memTouch(copy(MEMORY), CVWD, gpath, 1);
+			addinfo = f"\x1B[32mCreated the directory {gpath}\x1B[0m";
+		else:
+			addinfo = "\x1B[31mInvalid `dir` | Expected 1 argument\x1B[0m";
+	elif (gpath[0] == "file"):
+		addinfoA = True;
+		if (len(gpath) == 2):
+			gpath = govnshCommand.split()[-1];
+			MEMORY = memTouch(copy(MEMORY), CVWD, gpath, 0);
+			addinfo = f"\x1B[32mCreated the file {gpath}\x1B[0m";
+		else:
+			addinfo = "\x1B[31mInvalid `file` | Expected 1 argument\x1B[0m";
+	elif (gpath[0] == "ba"):
+		if (len(gpath) == 1):
+			if (CVWD == "*"):
+				addinfoA = True;
+				addinfo = f"\x1B[32mPOSHALKO 1488\x1B[0m";
+			else:
+				CVWD = "*".join(CVWD[:-1].split("*")[:-1])+"*";
+		else:
+			addinfo = "\x1B[31mInvalid `ba` | Expected 0 arguments\x1B[0m";
+	elif (gpath[0] == "exit"):
+		govnshExit = True;
+		if (len(gpath) == 1):
+			govnshExitCode = 0;
+		elif (len(gpath) == 2):
+			govnshExitCode = int(gpath[1]);
+		else:
+			addinfo = "\x1B[31mInvalid `exit` | Expected 0 or 1 argument\x1B[0m";
+	elif (gpath[0] == "ren"):
+		if (len(gpath) == 3):
+			contaddrs = fsReadFile(MEMORY, CVWD, gpath[0]);
+			print(contaddrs, CVWD, gpath[0]);
+			contaddrs00 = contaddrs[0];
+			contaddrs = contaddrs[2:6];
+			if (contaddrs00 == 1):
+				addinfo = f"\x1B[31mFile {gpath[0]} not found\x1B[0m";
+			elif (len(gpath[1]) < len(gpath[0])):
+				for i,j in enumerate(gpath[1]):
+					MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
+				for j in range(len(gpath[0])-len(gpath[1])):
+					MEMORY.pop(contaddrs[1]+i+1);
+				MEMORY += [0 for i in range(len(gpath[0])-len(gpath[1]))];
+			elif (len(gpath[1]) == len(gpath[0])):
+				for i,j in enumerate(gpath[0]):
+					MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
+			else:
+				for i,j in enumerate(gpath[0]):
+					MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
+				i = len(gpath[0]);
+				for j in range(len(gpath[1])-len(gpath[0])):
+					MEMORY.insert(contaddrs[1]+i+j, unicodeToGovnocodeDir(gpath[1][i+j])[0]);
+				MEMORY = MEMORY[:-(len(gpath[1])-len(gpath[0]))];
+			addinfo = "\x1B[32mFile succesfully renamed.\x1B[0m";
+		else:
+			addinfo = "\x1B[31mInvalid `ren` | Expected 2 arguments\x1B[0m";
+	elif (gpath[0] == "rmv"):
+		if (len(gpath) == 2):
+			rdfl = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1]);
+			addinfoA = True;
+			if (rdfl[0] == 0):
+				MEMORY = fsRemFile(copy(MEMORY), rdfl[2])[1];
+				addinfo = f"\x1B[32mRemoved file {govnshCommand.split()[1]}\x1B[0m";
+			else:
+				addinfo = f"\x1B[31mFile {govnshCommand.split()[1]} not found\x1B[0m";
+		else:
+			addinfo = "\x1B[31mInvalid `rmv` | Expected 1 argument\x1B[0m";
+	elif (gpath[0] == "to"):
+		addinfoA = True;
+		if (len(gpath) == 2):
+			if (gpath in list(map(lambda a: a[len(CVWD):], fsParseHe(MEMORY, CVWD)[1]))):
+				CVWD += gpath[1];
+				addinfo = f"\x1B[32mMoved to the folder {gpath}\x1B[0m";
+			else:
+				addinfo = f"\x1B[31mFolder not found: {govnshCommand.split()[-1]}\x1B[0m";
+		else:
+			addinfo = "\x1B[31mInvalid `to` | Expected 1 argument\x1B[0m";
+	elif (gpath[0] == "sys.memdump"):
+		addinfoA = True;
+		if ((len(gpath) < 2) and (len(gpath) > 3)):
+			addinfo = "\x1B[31mInvalid `sys.memdump` | Expected 1 or 2 arguments\x1B[0m";
+		else:
+			if (gpath[1] == "-u"):
+				addinfoA = True;
+				if (gpath[2].isdigit()):
+					print(govnshCommand.split());
+					addinfo = memDumpUnicode00(copy(MEMORY), int(gpath[2]));
+				else:
+					addinfo = memDumpUnicode00(copy(MEMORY), 20);
+			else:
+				addinfo = memDump00(MEMORY, 20);
+				if (govnshCommand.split()[-1].isdigit()):
+					addinfo = memDump00(MEMORY, int(govnshCommand.split()[-1]));
+				else:
+					addinfo = memDump00(MEMORY, 20);
+	else:
+		addinfoA = True;
+		addinfo = f"\x1B[31mUnknown command `{gpath[0]}`\x1B[0m";
+	return govnshExitCode, MEMORY, CVWD, addinfoA, addinfo;
+
 def sysGovnSh(CVWD):
 	global govnosExit, MEMORY;
 	govnshCommand = "";
 	govnshCList = [];
 	govnshExit = False;
+	GEXITCODE = 0;
 	while (not govnshExit):
 		pk = readord();
 		addinfo = False;
@@ -366,115 +548,8 @@ def sysGovnSh(CVWD):
 			govnshCommand += " ";
 		elif (pk == 10):
 			print00("\n");
+			GEXITCODE, MEMORY, CVWD, addinfoA, addinfo = sysExecLine(MEMORY, CVWD, govnshCommand);
 			govnshCList.append(govnshCommand);
-			if (govnshCommand == "help"):
-				addinfoA = True;
-				addinfo = "Use `help 0` to read the manual";
-			elif (govnshCommand.startswith("help ")):
-				addinfoA = True;
-				addinfo = sysManual(page=govnshCommand.split()[1]);
-			elif (govnshCommand.startswith("time ")):
-				addinfoA = True
-				gcarg = govnshCommand.split()[1];
-				dt = datetime.datetime.now();
-				if (gcarg == "-t"):
-					addinfo = f"{dt.hour}:{dt.minute}:{dt.second}";
-			elif (govnshCommand == "wd"):
-				addinfoA = True;
-				addinfo = CVWD;
-			elif (govnshCommand == "shutdown"):
-				govnshExit = True;
-			elif (govnshCommand == "he"):
-				addinfoA = True;
-				addinfo = "\n".join(fsParseHe(MEMORY, CVWD)[0]);
-			elif (govnshCommand.startswith("he ")):
-				addinfoA = True;
-				addinfo = "\n".join(fsParseHe(MEMORY, CVWD+govnshCommand.split()[1])[0]);
-			elif (govnshCommand.startswith("inside ")):
-				addinfoA = True;
-				retcode, container = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1])[:2];
-				if (not retcode):
-					addinfo = "".join(govnocodeToUnicode(container));
-				elif (retcode == 1):
-					addinfo = f"\x1B[31mCould not find the file {govnshCommand.split()[1]}\x1B[0m";
-			elif (govnshCommand.startswith("dir ")):
-				addinfoA = True;
-				gpath = govnshCommand.split()[-1];
-				MEMORY = memTouch(copy(MEMORY), CVWD, gpath, 1);
-				addinfo = f"\x1B[32mCreated the directory {gpath}\x1B[0m";
-			elif (govnshCommand.startswith("file ")):
-				addinfoA = True;
-				gpath = govnshCommand.split()[-1];
-				MEMORY = memTouch(copy(MEMORY), CVWD, gpath, 0);
-				addinfo = f"\x1B[32mCreated the file {gpath}\x1B[0m";
-			elif (govnshCommand == "ba"):
-				if (CVWD == "*"):
-					addinfoA = True;
-					addinfo = f"\x1B[32mPOSHALKO 1488\x1B[0m";
-				else:
-					CVWD = "*".join(CVWD[:-1].split("*")[:-1])+"*";
-			elif (govnshCommand == "exit"):
-				govnshExit = True;
-			elif (govnshCommand.startswith("ren")):
-				gpath = govnshCommand.split()[1:];
-				if (len(gpath) != 2):
-					addinfoA = True;
-					addinfo = "\x1B[31mren requires 2 arguments\x1B[0m";
-				else:
-					contaddrs = fsReadFile(MEMORY, CVWD, gpath[0]);
-					print(contaddrs, CVWD, gpath[0]);
-					contaddrs00 = contaddrs[0];
-					contaddrs = contaddrs[2:6];
-					if (contaddrs00 == 1):
-						addinfoA = True;
-						addinfo = f"\x1B[31mFile {gpath[0]} not found\x1B[0m";
-					elif (len(gpath[1]) < len(gpath[0])):
-						for i,j in enumerate(gpath[1]):
-							MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
-						for j in range(len(gpath[0])-len(gpath[1])):
-							MEMORY.pop(contaddrs[1]+i+1);
-						MEMORY += [0 for i in range(len(gpath[0])-len(gpath[1]))];
-					elif (len(gpath[1]) == len(gpath[0])):
-						for i,j in enumerate(gpath[0]):
-							MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
-					else:
-						for i,j in enumerate(gpath[0]):
-							MEMORY[contaddrs[1]+i] = unicodeToGovnocodeDir(gpath[1][i])[0];
-						i = len(gpath[0]);
-						for j in range(len(gpath[1])-len(gpath[0])):
-							MEMORY.insert(contaddrs[1]+i+j, unicodeToGovnocodeDir(gpath[1][i+j])[0]);
-						MEMORY = MEMORY[:-(len(gpath[1])-len(gpath[0]))];
-			elif (govnshCommand.startswith("rmv ")):
-				rdfl = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1]);
-				addinfoA = True;
-				if (rdfl[0] == 0):
-					MEMORY = fsRemFile(copy(MEMORY), rdfl[2])[1];
-					addinfo = f"\x1B[32mRemoved file {govnshCommand.split()[1]}\x1B[0m";
-				else:
-					addinfo = f"\x1B[31mFile {govnshCommand.split()[1]} not found\x1B[0m";
-			elif (govnshCommand.startswith("to ")):
-				addinfoA = True;
-				gpath = govnshCommand.split()[-1];
-				if (gpath in list(map(lambda a: a[len(CVWD):], fsParseHe(MEMORY, CVWD)[1]))):
-					CVWD += gpath;
-					addinfo = f"\x1B[32mMoved to the folder {gpath}\x1B[0m";
-				else:
-					addinfo = f"\x1B[31mFolder not found: {govnshCommand.split()[-1]}\x1B[0m";
-			elif (govnshCommand.startswith("sys.memdump")):
-				addinfoA = True;
-				if (govnshCommand.startswith("sys.memdump -u")):
-					addinfoA = True;
-					if (govnshCommand.split()[-1].isdigit()):
-						print(govnshCommand.split());
-						addinfo = memDumpUnicode00(copy(MEMORY), int(govnshCommand.split()[-1]));
-					else:
-						addinfo = memDumpUnicode00(copy(MEMORY), 20);
-				else:
-					addinfo = memDump00(MEMORY, 20);
-					if (govnshCommand.split()[-1].isdigit()):
-						addinfo = memDump00(MEMORY, int(govnshCommand.split()[-1]));
-					else:
-						addinfo = memDump00(MEMORY, 20);
 			govnshCommand = "";
 		elif (pk == 127):
 			if (govnshCommand):
@@ -485,9 +560,9 @@ def sysGovnSh(CVWD):
 		else:
 			print00("\n\x1B[31m>> Unknown key! <<\x1B[0m");
 		if (addinfoA):
-			printScr([f">> {govnshCommand}_", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
+			printScr00([f">> {govnshCommand}_", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
 		else:
-			printScr([f">> {govnshCommand}_", f"Key pressed: {pk}"], screenLength);
+			printScr00([f">> {govnshCommand}_", f"Key pressed: {pk}"], screenLength);
 	return govnshCList;
 
 def sysGravno(CVWD):
@@ -503,9 +578,9 @@ def sysGravno(CVWD):
 	while (gravnomode):
 		tm = datetime.datetime.now();
 		tmf = f"{tm.hour:0>2}:{tm.minute:0>2}";
-		tmf00 = "GovnOS 1.12.2";
+		tmf00 = "GovnOS 0.126";
 		tmf = ("{:}{: >"+f"{screenWidth-len(tmf00)}"+"}").format(tmf00, tmf);
-		printScr([
+		printScr00([
 			tmf,
 			"-"*screenWidth,
 			f"{k}"
@@ -722,7 +797,7 @@ if not MEMORY[0]:
 
 hostname = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "HOST")[1]);
 
-print("GovnOS 1.12.2 (0.112)");
+print("GovnOS 0.116");
 print("Loading...");
 print(f"  MEMORY {len(MEMORY)} bytes +");
 print(f"  MEMORY {len(MEMORYD)} bytes +");
@@ -741,6 +816,7 @@ while (sysReadSece(govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "SECE.C")[1]
 	usr01 = input("Password: ");
 
 CUSR = usr00; # Enter to the system
+# If CUSR is not ROOT, spawn in *HOME* by default.
 if (CUSR != "ROOT"):
 	CVWD = "*HOME*";
 
@@ -770,9 +846,6 @@ while (not govnosExit):
 		print("Press Esc,Esc to shutdown");
 	elif (k == [27, 27]):
 		govnosExit = True;
-
-# MEMORY = memorySysWipe(MEMORY);
-# memDumpUnicode(copy(MEMORY), 55, lf=True);
 
 # Shutting down
 sysShutdown(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
