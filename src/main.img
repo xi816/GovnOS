@@ -365,11 +365,11 @@ def sysGovnSh(CVWD):
 		elif (pk == 32):
 			govnshCommand += " ";
 		elif (pk == 10):
-			print00("\n"); # Спустить копыта и выполнить команду
+			print00("\n");
 			govnshCList.append(govnshCommand);
-			# Чел сделай чтобы работало всё
 			if (govnshCommand == "help"):
-				print("Use `help 0` to read the manual");
+				addinfoA = True;
+				addinfo = "Use `help 0` to read the manual";
 			elif (govnshCommand.startswith("help ")):
 				addinfoA = True;
 				addinfo = sysManual(page=govnshCommand.split()[1]);
@@ -386,8 +386,10 @@ def sysGovnSh(CVWD):
 				govnshExit = True;
 			elif (govnshCommand == "he"):
 				addinfoA = True;
-				print(CVWD);
 				addinfo = "\n".join(fsParseHe(MEMORY, CVWD)[0]);
+			elif (govnshCommand.startswith("he ")):
+				addinfoA = True;
+				addinfo = "\n".join(fsParseHe(MEMORY, CVWD+govnshCommand.split()[1])[0]);
 			elif (govnshCommand.startswith("inside ")):
 				addinfoA = True;
 				retcode, container = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1])[:2];
@@ -442,6 +444,14 @@ def sysGovnSh(CVWD):
 						for j in range(len(gpath[1])-len(gpath[0])):
 							MEMORY.insert(contaddrs[1]+i+j, unicodeToGovnocodeDir(gpath[1][i+j])[0]);
 						MEMORY = MEMORY[:-(len(gpath[1])-len(gpath[0]))];
+			elif (govnshCommand.startswith("rmv ")):
+				rdfl = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1]);
+				addinfoA = True;
+				if (rdfl[0] == 0):
+					MEMORY = fsRemFile(copy(MEMORY), rdfl[2])[1];
+					addinfo = f"\x1B[32mRemoved file {govnshCommand.split()[1]}\x1B[0m";
+				else:
+					addinfo = f"\x1B[31mFile {govnshCommand.split()[1]} not found\x1B[0m";
 			elif (govnshCommand.startswith("to ")):
 				addinfoA = True;
 				gpath = govnshCommand.split()[-1];
@@ -493,7 +503,7 @@ def sysGravno(CVWD):
 	while (gravnomode):
 		tm = datetime.datetime.now();
 		tmf = f"{tm.hour:0>2}:{tm.minute:0>2}";
-		tmf00 = "GovnOS 1.10";
+		tmf00 = "GovnOS 1.12.2";
 		tmf = ("{:}{: >"+f"{screenWidth-len(tmf00)}"+"}").format(tmf00, tmf);
 		printScr([
 			tmf,
@@ -540,23 +550,23 @@ def sysHalt(event, **kwargs):
 			k = readord();
 
 # Filesystem things
-def fsParseHe(MEMORY, CVWD): # MEMORY[pos] is current parsed byte
+def fsParseHe(MEMORY, CVWD):
 	pos = 0;
 	fsn = "";
 	foldsFound = [];
 	filesFound = [];
 	while (MEMORY[pos] != GC_EOF):
 		print(f"\x1B[32mFolders: {foldsFound}, {filesFound}. Pos: {pos}\x1B[0m");
-		if (MEMORY[pos] == 0x01): # найдена папка
+		if (MEMORY[pos] == 0x01): # directory found
 			fsn = "";
-			pos += 2; # перейти в начало пути папки
+			pos += 2;
 			while (MEMORY[pos] != 0x01):
 				fsn += govnocodeToUnicode00(MEMORY[pos]);
 				pos += 1;
 			foldsFound.append(fsn);
 			fsn = "";
 			pos += 1;
-		elif (MEMORY[pos] == 0x02): # найден файл
+		elif (MEMORY[pos] == 0x02): # file found
 			pos += 2;
 			fsn = ["", ""];
 			while (MEMORY[pos] != 0x03):
@@ -575,7 +585,7 @@ def fsParseHe(MEMORY, CVWD): # MEMORY[pos] is current parsed byte
 			pos += 1;
 		else:
 			print(f"\x1B[31mUnknown symbol found while folder parsing -> {MEMORY[pos]}. {pos}\x1B[0m");
-	foldsNeeded = [f"Data in {CVWD}:"]+(list(map(lambda a: "  "+a, getFolds(foldsFound, CVWD))))+list(map(lambda a: "  "+a, filesFound));
+	foldsNeeded = [f"Data in {CVWD}:"]+(list(map(lambda a: f"  {a: <10}"+" DIR", getFolds(foldsFound, CVWD))))+list(map(lambda a: f"  {a: <10} FILE", filesFound));
 	print(f"\x1B[32m{foldsNeeded}\x1B[0m");
 	return foldsNeeded, foldsFound;
 
@@ -605,7 +615,6 @@ def fsReadFile(MEMORY, CVWD, FIN):
 				fins += govnocodeToUnicode00(MEMORY[pos]);
 				pos += 1;
 			pos += 1;
-			print(fins+fins00);
 			if (fins+fins00 == CVWD+FIN): # found the file
 				INSADDR = pos;
 				while (MEMORY[pos] != 0x02):
@@ -624,6 +633,16 @@ def fsReadFile(MEMORY, CVWD, FIN):
 		else:
 			print(f"\x1B[31m-> {MEMORY[pos]}. {pos}\x1B[0m");
 	return 1, ins, 69420, 69420, 69420, 69420;
+
+def fsRemFile(MEMORY, FILESTART):
+	fsz = 0;
+	MEMORY.pop(FILESTART);
+	while (MEMORY[FILESTART] != 0x02):
+		MEMORY.pop(FILESTART);
+		print(govnocodeToUnicode01(MEMORY[FILESTART-10:FILESTART+10]));
+	MEMORY.pop(FILESTART);
+	print(govnocodeToUnicode01(MEMORY[FILESTART-10:FILESTART+10]));
+	return 0, MEMORY;
 
 def sysReadSece(s: str):
 	s = s.split(" ");
@@ -701,9 +720,9 @@ if not MEMORY[0]:
 				print("  GovnFS installed!");
 				print("  Filesystem built!");
 
-hostname = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "HOST")[1])
+hostname = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "HOST")[1]);
 
-print("GovnOS 1.10 (0.110)");
+print("GovnOS 1.12.2 (0.112)");
 print("Loading...");
 print(f"  MEMORY {len(MEMORY)} bytes +");
 print(f"  MEMORY {len(MEMORYD)} bytes +");
@@ -722,6 +741,8 @@ while (sysReadSece(govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "SECE.C")[1]
 	usr01 = input("Password: ");
 
 CUSR = usr00; # Enter to the system
+if (CUSR != "ROOT"):
+	CVWD = "*HOME*";
 
 print("\nPress Esc,C to start TyGovno command mode");
 print("Press Esc,G to start Gravno graphics mode");

@@ -4,6 +4,9 @@ Use `wd` to display the current directory.
 Use `to FOLDER*` to go to that folder.
 Use `he` to display files in the current folder.
 Use `ba` to go back one folder.
+Use `inside FILE` to show file contents.
+Use `dir DIR*` to create a firectory.
+Use `file FILE` to create a file.
+Use `rmv FILE` to remove a file.
 
-Use `logout` to quit command mode.
-
+Use `exit` to exit command mode.
