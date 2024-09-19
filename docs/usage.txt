@@ -14,13 +14,22 @@ To shutdown, press Esc,Esc.
 
 3. Terminal mode
 In Terminal mode you can write commands.
-To show current directory path, write `wd`.
+To show current directory path, type `wd`.
 To show files and directories in the current directory, type `he`.
-To go into a directory, write `to NAME*`.
-To go back one directory, write `ba`.
+To go into a directory, type `to NAME*`.
+To go back one directory, type `ba`.
+To remove a file, type `rmv FILE`.
+To rename a file, type `ren FILE FILE2`.
+To move a file into another directory, type `mov FILE NEWDIR*`.
+To add bytes into the file contents, type `adc FILE 07 00 06 2A`.
+To add GovnoCode symbols into the file contents, type `adg FILE *\0?K`.
+To remove bytes from the file contents, type `rmc FILE 5`.
+To clear file contents, type `cfs FILE`.
+To remove a directory, type `rmd DIR*`.
 To load a program into memory (4. Program installation),
+To update screen components, type `upc`.
 use `load PROG*NAME*`. Each program is stored in *PROG*NAME*,
-and the file that loads into memory is stored in *PROG*NAME*ST.X
+and the file that loads into memory is stored in *PROG*NAME*MAIN.B
 
 4. Program installation
 To install a program from lib repositories, use `fnm -l name`.

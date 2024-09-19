@@ -1,0 +1,17 @@
+Commands:
+	Command  Usage             Description
+	adc      adc NAME BYTES    Add bytes into file contents
+	adg      adg NAME SYMBS    Add GovnoCode symbols into file contents
+	ba       ba                Go one directory back
+	cfs      cfs               Clear file contents
+	exit     exit              Exit session of current mode
+	he       he                List files and directories in the current directory
+	lod      lod *PROG*PROG.B  Load the program into memory (*PROG*NAME*MAIN.B)
+	mov      mov FILE DIR*     Move file to another directory
+	ren      ren FILE NEW      Rename the file
+	rmc      rmc FILE COUNT    Remove bytes from file contents
+	rmd      rmd DIR*          Remove a directory
+	rmv      rmv FILE          Remove a file
+	st       st                Start program execution from memory
+	upc      upc               Refresh screen components
+	wd       wd                Print the current working directory
