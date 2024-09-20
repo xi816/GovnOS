@@ -2,13 +2,13 @@ GovnOS installation guide manual
 
 1. Setting up the drive
 Set up a drive for installation
-You can change the drive size, memory size, **VAR size and **LEGV size
+You can change the drive size, memory size, **VAR size and **STACK size
 In this example provided:
-	Drive size -- 4096 (4KB)
-	Memory size -- 4096 (4KB)
-	**VAR size -- 8128 (7.9375KB)
-	**LEGV size -- 64 (0.0625KB)
-# ./memory-gen DRIVENAME 4096 4096 8128 64
+	Drive size -- 8 sectors (4KB)
+	Memory size -- 8 sectors (4KB)
+	**VAR size -- 8 sectors (4KB)
+	**STACK size -- 8 sectors (4KB)
+# ./memory-gen DRIVENAME 8 8 8 8
 	Are you sure? (Y/N): Y
 	Drive created.
 
@@ -38,7 +38,6 @@ That's it! GovnOS is now installed and you can shut it
 down.
 $ exit
 Then run it again using ./run DRIVENAME
-
 
 
 $ -- GovnOS terminal command

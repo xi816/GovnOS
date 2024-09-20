@@ -1,0 +1,19 @@
+Push a number:
+	34
+
+Operations:
+	34 35 +
+	500 80 -
+	42 10 *
+	966 14 /
+
+Functions:
+	64 @.
+
+Memory:
+	de A (ch%5)
+	A    "H"  $
+	A 1+ "I"  $
+	A 2+ "!"  $
+	A 3+ "~<" $
+	A 4+ "~0" $
