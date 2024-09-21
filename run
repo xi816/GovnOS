@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-~/myvenv/bin/python3 src/x86-64/main.img -d $1 $2
+~/myvenv/bin/python3 src/main.img -d $1 $2
