@@ -1,0 +1,47 @@
+#!/usr/bin/python3
+# A program to put files into the virtual drive
+
+import sys;
+from govnocodeuc import *;
+
+if (len(sys.argv) != 5):
+	print(f"\x1B[31mError! Expected 4 arguments, got {len(sys.argv)-1}. Exiting...\x1B[0m");
+	sys.exit(0);
+drive = sys.argv[1];
+filename = sys.argv[2];
+enddir = sys.argv[3];
+endfilename = sys.argv[4];
+
+GC_EOF = 0x42;
+
+with open(f"./memory/{drive}/mem.dat", "rb") as fl:
+	flc = list(fl.read());
+with open(f"./source/{filename}", "rb") as fl:
+	flcm = list(fl.read());
+
+for i,j in enumerate(flc):
+	if (j == GC_EOF):
+		break;
+
+flc[i] = 0x02;
+flc[i+1] = 0x03;
+i += 2;
+for j,k in enumerate(endfilename):
+	flc[i+j] = unicodeToGovnocodeDir(k)[0];
+i = i+j+1;
+flc[i] = 0x03;
+i += 1;
+for j,k in enumerate(enddir):
+	flc[i+j] = unicodeToGovnocodeDir(k)[0];
+i = i+j+1;
+flc[i] = 0x03;
+i += 1;
+print(flcm);
+for j,k in enumerate(flcm):
+	flc[i+j] = k;
+i = i+j+1;
+flc[i] = 0x02;
+flc[i+1] = GC_EOF;
+
+with open(f"./memory/{drive}/mem.dat", "wb") as fl:
+	fl.write("".join(map(chr, flc)).encode());

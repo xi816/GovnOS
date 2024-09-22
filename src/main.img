@@ -12,12 +12,15 @@ from time import sleep;
 from random import choice, randint;
 from dbgtools import *;
 from govnosconst import *;
+from govnocodeuc import *;
 
 arp = 0;
 screenLength = os.get_terminal_size().lines-1;
 screenWidth = os.get_terminal_size().columns;
 drive = "DRV";
 govnosExit = False;
+
+GOS_VER = "0.122";
 
 # Default run config
 SHBUFSZ = 1024;
@@ -64,14 +67,6 @@ if (DBGMODE): dbg_print(f"GovnoCode EOF is set to: {nhex(GC_EOF)}");
 
 CVWD = "*";
 CUSR = "";
-
-govnocodePage00 = [
-  "\\0", "\\d", "\\f", "\\g", " ", "!", "?", "*", "&", "\"", "#", "@", ":", ";", "+", "-",
-  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "(", ")", "=", "_", "/", ".",
-  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
-  "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "(", ")", "[", "]", "{", "}",
-  "<", ">", "EOF"
-];
 
 def print00(*args, end="", sep=" "):
   print(*args, end=end, sep=sep);
@@ -248,32 +243,6 @@ def memPut(MEMORY, ldata, stid):
     MEMORY[stid+ix] = el;
   return MEMORY, stid+ix+1;
 
-def govnocodeToUnicode(l: list):
-  for i, j in enumerate(l):
-    l[i] = govnocodePage00[j];
-  return l;
-
-def govnocodeToUnicode00(c: str):
-  return govnocodePage00[c];
-
-def govnocodeToUnicode01(l: list):
-  return "".join(govnocodeToUnicode(l));
-
-def unicodeToGovnocodeDir(l: str):
-  l = list(l);
-  for i, j in enumerate(l):
-    if (ord(j) in range(65, 91)):
-      l[i] = ord(j)-33;
-    elif (ord(j) in range(48, 58)):
-      l[i] = ord(j)-32;
-    elif (j == "."):
-      l[i] = 0x1F;
-    elif (ord(j) == 42):
-      l[i] = 0x07;
-    else:
-      print(f"\x1B[31mUnknown symbol: {hex(ord(j))}\x1B[0m");
-  return l;
-
 # Function to create a file or directory using GovnFS
 def memTouch(mem, dir, name, t: str): # t=0 -> file, t=1 -> directory
   for i, j in enumerate(mem):
@@ -355,21 +324,28 @@ def sysInstallBasic(MEMORY, username: str, password: list, hostname: str):
   );
   installationProcess02 = ucToBytes(
     "\\f\\f\\gCPS.C\\g*GRP*\\g>>\\f\\d\\g*TMP*\\d\\d\\g*PROG*\\d\\d\\g*HOME*\\d\\f\\gFILE.T\\g*\\g69\\f\\d\\g*BOOT*\\d\\f\\gINIT.B\\g*BOOT*\\g411 DO*1*\\f"+\
-    "\\d\\g*KERNEL*\\d\\f\\g00WEL.B\\g*KERNEL*\\g"
+    "\\d\\g*KERNEL*\\d"
   );
-  installationProcess03 = [
-    0x00
-  ];
-  installationProcess04 = ucToBytes(
+  installationProcess03 = ucToBytes(
     "\\f\\f\\gSERIAL.A\\g*\\g14-2FA2-81\\f"
   )+[GC_EOF];
+  copyFiles = {
+    "ROOT.A": ["*", "ROOT.A"],
+    "KERNEL/00WEL.B": ["*KERNEL*", "00WEL.B"],
+    "KERNEL/01AAA.B": ["*KERNEL*", "01AAA.B"],
+    "KERNEL/02AAB.B": ["*KERNEL*", "02AAB.B"]
+  };
+
   mem, stid = memPut(MEMORY, installationProcess00, 0);
   mem, stid = memPut(MEMORY, password[1]+[0x04]+username+[0x0C]+password[0], stid);
   mem, stid = memPut(MEMORY, installationProcess01, stid);
   mem, stid = memPut(MEMORY, hostname, stid);
   mem, stid = memPut(MEMORY, installationProcess02, stid);
+  # for fle in copyFiles:
+  #   print(f"  Copying {''.join(copyFiles[fle])}...");
+  #   sp.run(["./tools/mput", "DRV", fle, copyFiles[fle][0], copyFiles[fle][1]]);
+  sleep(0.5);
   mem, stid = memPut(MEMORY, installationProcess03, stid);
-  mem, stid = memPut(MEMORY, installationProcess04, stid);
   return mem;
 
 def sysScreenUpdate():
@@ -381,6 +357,17 @@ def contAddr(MEMORY, FILEDIR, FILENAME):
 
 def randLetter():
   return chr(randint(97, 123));
+
+def sysExec(MEMORY, CVWD, govnshCommand):
+  govnshCommand = govnshCommand.split(" :: ");
+  addinfo = "";
+  if (len(govnshCommand) == 1):
+    return sysExecLine(MEMORY, CVWD, govnshCommand[0]);
+  elif (len(govnshCommand) > 1):
+    for i in govnshCommand:
+      retc, MEMORY, CVWD, _, addinfo00, addi01 = sysExecLine(MEMORY, CVWD, i);
+      addinfo += addinfo00;
+    return retc, MEMORY, CVWD, True, addinfo, addi01;
 
 def sysExecLine(MEMORY, CVWD, govnshCommand):
   gpath = govnshCommand.split();
@@ -394,6 +381,8 @@ def sysExecLine(MEMORY, CVWD, govnshCommand):
     return None;
   elif (gpath[0] == "bs"):
     sp.run("clear");
+  elif (gpath[0] == "ech"):
+    print(gpath[1:]);
   elif (gpath[0] == "help"):
     if ((len(gpath) == 2) and (gpath[1].isdigit())):
       addinfoA = True;
@@ -589,7 +578,7 @@ def sysGovnSh(CVWD, CPS, prtsc=False):
     elif (pk == 10):
       print00("\n");
       if (govnshCommand):
-        GEXITCODE, MEMORY, CVWD, addinfoA, addinfo, (govnosExit, govnshExit) = sysExecLine(MEMORY, CVWD, govnshCommand);
+        GEXITCODE, MEMORY, CVWD, addinfoA, addinfo, (govnosExit, govnshExit) = sysExec(MEMORY, CVWD, govnshCommand);
         if (prtsc):
           if (addinfo): print00(addinfo, end="\n");
           else: print00(addinfo);
@@ -603,8 +592,6 @@ def sysGovnSh(CVWD, CPS, prtsc=False):
     elif (pk == [27, 27]):
       govnshExit = True;
       govnosExit = True;
-    else:
-      print00("\n\x1B[B\x1B[31m>> Unknown key! <<\x1B[0m");
     if (not prtsc):
       if (addinfoA):
         printScr00([f"{CPS}{govnshCommand}_", f"Key pressed: {pk}", ""]+addinfo.split("\n"), screenLength);
@@ -625,7 +612,7 @@ def sysGravno(CVWD):
   while (gravnomode):
     tm = datetime.datetime.now();
     tmf = f"{tm.hour:0>2}:{tm.minute:0>2}";
-    tmf00 = "GovnOS 0.121";
+    tmf00 = "GovnOS 0.122";
     tmf = ("{:}{: >"+f"{screenWidth-len(tmf00)}"+"}").format(tmf00, tmf);
     printScr00([
       tmf,
@@ -794,7 +781,7 @@ def sysInstallSh(MEMORY):
   gssScr = ["\x1B[44m\x1B[37mWelcome to GovnOS!", f"\x1B[47m\x1B[30mLoading drive (2s for retry)...", ""];
   printScr00(gssScr, screenLength, "");
   sleep(0.5);
-  gssScr = ["\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", "\x1B[44m\x1B[37mVersion: 0.121", "Loaded."];
+  gssScr = ["\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
   printScr00(gssScr, screenLength, "");
   sleep(0.2);
 
@@ -853,7 +840,7 @@ def sysInstallSh(MEMORY):
     printScr00(gssScr, screenLength, "", True);
     in00["user"] = [in01, in02, 0x00];
     sleep(0.5);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", "\x1B[44m\x1B[37mVersion: 0.121", "Loaded."];
+    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
     gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password    <<<<", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
     printScr00(gssScr, screenLength, "", True);
     input();
@@ -864,7 +851,7 @@ def sysInstallSh(MEMORY):
     printScr00(gssScr, screenLength, "", True);
     in00["root"] = in01;
     sleep(0.5);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", "\x1B[44m\x1B[37mVersion: 0.121", "Loaded."];
+    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
     gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname       <<<<", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
     printScr00(gssScr, screenLength, "", True);
     input();
@@ -875,22 +862,20 @@ def sysInstallSh(MEMORY):
     printScr00(gssScr, screenLength, "", True);
     in00["host"] = in01;
     sleep(0.5);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", "\x1B[44m\x1B[37mVersion: 0.121", "Loaded."];
+    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
     gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname",	"  4. Save changes to drive <<<<", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
     printScr00(gssScr, screenLength, "", True);
     input();
     gssScr.append("  Building a filesystem...");
     gssScr.append("  Installing GovnFS Basic Memory Bootstrap...");
     MEMORY = sysInstallBasic(MEMORY, unicodeToGovnocodeDir(in00["user"][0]), (unicodeToGovnocodeDir(in00["user"][1]), unicodeToGovnocodeDir(in00["root"])), unicodeToGovnocodeDir(in00["host"]));
-    gssScr.append("  GovnFS installed!");
-    gssScr.append("  Filesystem built!");
     printScr00(gssScr, screenLength, "", True);
     sleep(1);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", "\x1B[44m\x1B[37mVersion: 0.121", "Loaded."];
+    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
     gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish                <<<<", f"\x1B[44m\x1B[37mYour drive serial number is: 14-2FA2-81.", "Press Ret to continue."];
     printScr00(gssScr, screenLength, "", True);
     input();
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", "\x1B[44m\x1B[37mVersion: 0.121", "Loaded."];
+    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
     gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish                <<<<", "\x1B[44m\x1B[37mInstallation finished!", "Press Ret to continue."];
     printScr00(gssScr, screenLength, "", True);
     input();
@@ -908,7 +893,7 @@ if (not MEMORY[0]):
   sys.exit(21);
 
 def sysGovnKernel(CDRV, MEMORY, CVWD, hostname, CUSR):
-  print("GovnOS 0.121");
+  print(f"GovnOS {GOS_VER}");
   print("Loading...");
   print(f"  MEMORY {len(MEMORY)} bytes +");
   print(f"  MEMORY {len(MEMORYD)} bytes +");
