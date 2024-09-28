@@ -2,11 +2,11 @@
 # Tool for GovnOS to know how much memory is used.
 
 import sys;
+from govnocodeuc import *;
 
 nhex = lambda a: "0x"+hex(a)[2:].upper();
 
 name = sys.argv[1];
-GC_EOF = 0x42; # Change when new GovnoCode standart will exist.
 
 with open(f"./memory/{name}/mem.dat", "rb") as fl:
 	s = list(map(ord, fl.read().decode()));

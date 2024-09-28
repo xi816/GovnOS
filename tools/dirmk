@@ -10,8 +10,6 @@ if (len(sys.argv) != 3):
 drive = sys.argv[1];
 dirnm = sys.argv[2];
 
-GC_EOF = 0x42;
-
 with open(f"./memory/{drive}/mem.dat", "rb") as fl:
 	flc = list(fl.read());
 
@@ -19,13 +17,13 @@ for i,j in enumerate(flc):
 	if (j == GC_EOF):
 		break;
 
-flc[i] = 0x01;
-flc[i+1] = 0x03;
+flc[i] = 0x71;
+flc[i+1] = 0x73;
 i += 2;
 for j,k in enumerate(dirnm):
 	flc[i+j] = unicodeToGovnocodeDir(k)[0];
 i = i+j+1;
-flc[i] = 0x01;
+flc[i] = 0x71;
 flc[i+1] = GC_EOF;
 
 with open(f"./memory/{drive}/mem.dat", "wb") as fl:

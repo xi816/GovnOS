@@ -4,14 +4,18 @@ Commands:
 	adg      adg NAME SYMBS    Add GovnoCode symbols into file contents
 	ba       ba                Go one directory back
 	cfs      cfs               Clear file contents
+	dxs      dxs DIR*          Check if directory exists
 	exit     exit              Exit session of current mode
+	fxs      fxs FILE          Check if file exists
 	he       he                List files and directories in the current directory
-	lod      lod *PROG*PROG.B  Load the program into memory (*PROG*NAME*MAIN.B)
+	lod (1)  lod NAME          Load the program into memory (*PROG*NAME*MAIN.B)
+	lod (2)  lod PROG.B        Load the program into memory
 	mov      mov FILE DIR*     Move file to another directory
+	prc      proc              Show current processes
 	ren      ren FILE NEW      Rename the file
 	rmc      rmc FILE COUNT    Remove bytes from file contents
 	rmd      rmd DIR*          Remove a directory
 	rmv      rmv FILE          Remove a file
-	st       st                Start program execution from memory
+	st       st PROC           Start program execution from memory
 	upc      upc               Refresh screen components
 	wd       wd                Print the current working directory

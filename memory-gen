@@ -2,6 +2,7 @@
 
 from os import system;
 from sys import argv;
+from govnocodeuc import *;
 
 if (len(argv) == 7):
   if (argv[6] != "-f"):
@@ -16,15 +17,15 @@ drive = argv[1];
 system(f"mkdir -p ./memory/{drive}/");
 
 with open(f"./memory/{drive}/mem.dat", "w") as fl:
-  fl.write("\0"*int(argv[2])*512);
+  fl.write(chr(GC_EOF)+"\0"*(int(argv[2])*512-1));
 
 with open(f"./memory/{drive}/memd.dat", "w") as fl:
-  fl.write("\0"*int(argv[3])*512);
+  fl.write(chr(GC_EOF)+"\0"*(int(argv[3])*512-1));
 
 with open(f"./memory/{drive}/memc.dat", "w") as fl:
-  fl.write("\0"*int(argv[4])*512);
+  fl.write(chr(GC_EOF)+"\0"*(int(argv[4])*512-1));
 
 with open(f"./memory/{drive}/memsd.dat", "w") as fl:
-  fl.write("\0"*int(argv[5])*512);
+  fl.write(chr(GC_EOF)+"\0"*(int(argv[5])*512-1));
 
 print("Drive created.");

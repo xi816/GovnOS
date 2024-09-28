@@ -1,0 +1,12 @@
+Root Drive (*)
+Drive Serial: 14-2FA2-81
+Data in *:
+  GRP*                     DIR
+  TMP*                     DIR
+  PROG*                    DIR
+  HOME*                    DIR
+  BOOT*                    DIR
+  KERNEL*                  DIR
+  FILE.T     0000005B 0002 FILE
+  SERIAL.A   00000097 000A FILE
+  ROOT.A     000000AF 0040 FILE

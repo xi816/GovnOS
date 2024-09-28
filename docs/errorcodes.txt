@@ -1,3 +1,2 @@
 0x00000000 -> Null
 0x00000001 -> Memory file missing, please, manually generate a new one using `memory-gen 1024 1024 1984 64`
-

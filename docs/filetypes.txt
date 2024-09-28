@@ -1,5 +1,4 @@
 .T -> text file
-.X -> program
+.B -> program
 .C -> system config file
 .CC -> program config file
-

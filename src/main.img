@@ -14,6 +14,13 @@ from dbgtools import *;
 from govnosconst import *;
 from govnocodeuc import *;
 
+# Constants
+SP = 0x10;
+BP = 0x11;
+PC = 0x12;
+ZFLAG = 0x13;
+OFLAG = 0x14;
+
 arp = 0;
 screenLength = os.get_terminal_size().lines-1;
 screenWidth = os.get_terminal_size().columns;
@@ -62,7 +69,6 @@ MEMORYC = [0 for i in range(1984)]; # program
 MEMORYSD = [0 for i in range(64)]; # legacy ram
 
 # GovnoCode binds
-GC_EOF = 0x42; # Change when GovnoCode will have a new standart
 if (DBGMODE): dbg_print(f"GovnoCode EOF is set to: {nhex(GC_EOF)}");
 
 CVWD = "*";
@@ -251,24 +257,24 @@ def memTouch(mem, dir, name, t: str): # t=0 -> file, t=1 -> directory
   mem[i] = 0x00; # Remove the EOF to make a new entry
   if (t == 0):
     print(i);
-    mem[i] = 0x02;
-    mem[i+1] = 0x03;
+    mem[i] = 0x72;
+    mem[i+1] = 0x73;
     i += 2;
     for j,k in enumerate(unicodeToGovnocodeDir(name)):
       mem[i+j] = k;
     i += j+1;
-    mem[i] = 0x03;
+    mem[i] = 0x73;
     i += 1;
     for j,k in enumerate(unicodeToGovnocodeDir(dir)):
       mem[i+j] = k;
     i += j+1;
-    mem[i] = 0x03;
-    mem[i+1] = 0x02;
+    mem[i] = 0x73;
+    mem[i+1] = 0x72;
     mem[i+2] = GC_EOF;
     i += 3;
   elif (t == 1):
-    mem[i] = 0x01;
-    mem[i+1] = 0x03;
+    mem[i] = 0x71;
+    mem[i+1] = 0x73;
     i += 2;
     for j,k in enumerate(unicodeToGovnocodeDir(dir)):
       mem[i+j] = k;
@@ -276,20 +282,15 @@ def memTouch(mem, dir, name, t: str): # t=0 -> file, t=1 -> directory
     for j,k in enumerate(unicodeToGovnocodeDir(name)):
       mem[i+j] = k;
     i += j+1;
-    mem[i] = 0x01;
+    mem[i] = 0x71;
     mem[i+1] = GC_EOF;
     i += 2;
   return mem;
 
-# Function to configure the disk from legacy configurations
-def sysLegacyConfig(MEMORY, conf):
-  print("\x1B[41mNO NEED OF SYSLEGACYCONFIG\x1B[0m");
-  exit(1);
-
 # Function to wipe the memory
 def memorySysWipe(MEMORY):
   memsize = len(MEMORY);
-  MEMORY = [0 for i in range(memsize)];
+  MEMORY = [GC_EOF]+[0 for i in range(memsize-1)];
   return MEMORY;
 
 def ucToBytes(uc: str):
@@ -302,12 +303,38 @@ def ucToBytes(uc: str):
       if (uc[pos] == "\\"):
         if (uc[pos+1] == "0"):
           res.append(0x00);
+        elif (uc[pos+1] == "N"):
+          res.append(0x70);
         elif (uc[pos+1] == "d"):
-          res.append(0x01);
+          res.append(0x71);
         elif (uc[pos+1] == "f"):
-          res.append(0x02);
+          res.append(0x72);
         elif (uc[pos+1] == "g"):
-          res.append(0x03);
+          res.append(0x73);
+        elif (uc[pos+1] == "A"):
+          res.append(0x74);
+        elif (uc[pos+1] == "B"):
+          res.append(0x75);
+        elif (uc[pos+1] == "C"):
+          res.append(0x76);
+        elif (uc[pos+1] == "D"):
+          res.append(0x77);
+        elif (uc[pos+1] == "E"):
+          res.append(0x78);
+        elif (uc[pos+1] == "F"):
+          res.append(0x79);
+        elif (uc[pos+1] == "G"):
+          res.append(0x7A);
+        elif (uc[pos+1] == "H"):
+          res.append(0x7B);
+        elif (uc[pos+1] == "I"):
+          res.append(0x7C);
+        elif (uc[pos+1] == "J"):
+          res.append(0x7D);
+        elif (uc[pos+1] == "K"):
+          res.append(0x7E);
+        elif (uc[pos+1] == "Z"):
+          res.append(0x7F);
         else:
           print(f"Illegal backslash escape: {uc[pos+1]}");
           sys.exit(61);
@@ -323,29 +350,34 @@ def sysInstallBasic(MEMORY, username: str, password: list, hostname: str):
     "\\f\\f\\gHOST\\g*GRP*\\g"
   );
   installationProcess02 = ucToBytes(
-    "\\f\\f\\gCPS.C\\g*GRP*\\g>>\\f\\d\\g*TMP*\\d\\d\\g*PROG*\\d\\d\\g*HOME*\\d\\f\\gFILE.T\\g*\\g69\\f\\d\\g*BOOT*\\d\\f\\gINIT.B\\g*BOOT*\\g411 DO*1*\\f"+\
+    "\\f\\d\\g*TMP*\\d\\d\\g*PROG*\\d\\d\\g*HOME*\\d\\f\\gFILE.T\\g*\\g69\\f\\d\\g*BOOT*\\d\\f\\gINIT.B\\g*BOOT*\\g411 DO*1*\\f"+\
     "\\d\\g*KERNEL*\\d"
   );
   installationProcess03 = ucToBytes(
-    "\\f\\f\\gSERIAL.A\\g*\\g14-2FA2-81\\f"
+    "\\f\\gSERIAL.A\\g*\\g14-2FA2-81\\f"
   )+[GC_EOF];
   copyFiles = {
     "ROOT.A": ["*", "ROOT.A"],
+    "GRP/CPS.C": ["*GRP*", "CPS.C"],
     "KERNEL/00WEL.B": ["*KERNEL*", "00WEL.B"],
     "KERNEL/01AAA.B": ["*KERNEL*", "01AAA.B"],
     "KERNEL/02AAB.B": ["*KERNEL*", "02AAB.B"]
   };
 
   mem, stid = memPut(MEMORY, installationProcess00, 0);
-  mem, stid = memPut(MEMORY, password[1]+[0x04]+username+[0x0C]+password[0], stid);
+  mem, stid = memPut(MEMORY, password[1]+[0x04]+username+[0x0B]+password[0], stid);
   mem, stid = memPut(MEMORY, installationProcess01, stid);
   mem, stid = memPut(MEMORY, hostname, stid);
   mem, stid = memPut(MEMORY, installationProcess02, stid);
-  # for fle in copyFiles:
-  #   print(f"  Copying {''.join(copyFiles[fle])}...");
-  #   sp.run(["./tools/mput", "DRV", fle, copyFiles[fle][0], copyFiles[fle][1]]);
-  sleep(0.5);
   mem, stid = memPut(MEMORY, installationProcess03, stid);
+  with open(f"./memory/{drive}/mem.dat", "w") as fl:
+    fl.write(strifyj(mem));
+  for fle in copyFiles:
+    print(f"  Copying {''.join(copyFiles[fle])}...");
+    sp.run(["./tools/mput", "DRV", fle, copyFiles[fle][0], copyFiles[fle][1]]);
+  with open(f"./memory/{drive}/mem.dat", "rb") as fl:
+    mem = list(fl.read());
+  sleep(0.5);
   return mem;
 
 def sysScreenUpdate():
@@ -358,18 +390,18 @@ def contAddr(MEMORY, FILEDIR, FILENAME):
 def randLetter():
   return chr(randint(97, 123));
 
-def sysExec(MEMORY, CVWD, govnshCommand):
+def sysExec(MEMORY, CVWD, govnshCommand, CPS):
   govnshCommand = govnshCommand.split(" :: ");
   addinfo = "";
   if (len(govnshCommand) == 1):
-    return sysExecLine(MEMORY, CVWD, govnshCommand[0]);
+    return sysExecLine(MEMORY, CVWD, govnshCommand[0], CPS);
   elif (len(govnshCommand) > 1):
     for i in govnshCommand:
-      retc, MEMORY, CVWD, _, addinfo00, addi01 = sysExecLine(MEMORY, CVWD, i);
+      retc, MEMORY, CVWD, _, addinfo00, addi01 = sysExecLine(MEMORY, CVWD, i, CPS);
       addinfo += addinfo00;
     return retc, MEMORY, CVWD, True, addinfo, addi01;
 
-def sysExecLine(MEMORY, CVWD, govnshCommand):
+def sysExecLine(MEMORY, CVWD, govnshCommand, CPS):
   gpath = govnshCommand.split();
   addinfoA = False;
   addinfo = "";
@@ -439,7 +471,11 @@ def sysExecLine(MEMORY, CVWD, govnshCommand):
     if (len(gpath) == 1):
       addinfo = "\n".join(fsParseHe(MEMORY, CVWD)[0]);
     elif (len(gpath) == 2):
-      addinfo = "\n".join(fsParseHe(MEMORY, CVWD+govnshCommand.split()[1])[0]);
+      dex00 = fsDirExist(MEMORY, CVWD, gpath[1])[0];
+      if (not dex00):
+        addinfo = "\n".join(fsParseHe(MEMORY, CVWD+govnshCommand.split()[1])[0]);
+      else:
+        addinfo = f"\x1B[31mDirectory {gpath[1]} not found.\x1B[0m";
     else:
       addinfo = "\x1B[31mInvalid `he` | Expected 0 or 1 argument\x1B[0m";
   elif (gpath[0] == "inside"):
@@ -456,7 +492,7 @@ def sysExecLine(MEMORY, CVWD, govnshCommand):
     addinfoA = True;
     if (len(gpath) == 2):
       MEMORY = memTouch(copy(MEMORY), CVWD, gpath[1], 1);
-      addinfo = f"\x1B[32mCreated the directory {gpath}\x1B[0m";
+      addinfo = f"\x1B[32mCreated the directory {gpath[1]}\x1B[0m";
     else:
       addinfo = "\x1B[31mInvalid `dir` | Expected 1 argument\x1B[0m";
   elif (gpath[0] == "file"):
@@ -511,6 +547,26 @@ def sysExecLine(MEMORY, CVWD, govnshCommand):
       addinfo = "\x1B[32mFile succesfully renamed.\x1B[0m";
     else:
       addinfo = "\x1B[31mInvalid `ren` | Expected 2 arguments\x1B[0m";
+  elif (gpath[0] == "dxs"):
+    addinfoA = True;
+    fsx = fsDirExist(MEMORY, CVWD, gpath[1]);
+    if (fsx[0] == 0):
+      addinfo = f"Directory {gpath[1]} exists.";
+    else:
+      addinfo = f"Directory {gpath[1]} does not exist.";
+  elif (gpath[0] == "fxs"):
+    addinfoA = True;
+    fsx = fsFileInfo(MEMORY, CVWD, gpath[1])[0];
+    if (fsx != 69420):
+      addinfo = f"File {gpath[1]} exists.";
+    else:
+      addinfo = f"File {gpath[1]} does not exist.";
+  elif (gpath[0] == "upc"):
+    addinfoA = True;
+    addinfo = "\x1B[32mRefreshing settings...\x1B[0m";
+    screenLength = os.get_terminal_size().lines-1;
+    screenWidth = os.get_terminal_size().columns;
+    CPS = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "CPS.C")[1]);
   elif (gpath[0] == "rmv"):
     if (len(gpath) == 2):
       rdfl = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1]);
@@ -522,6 +578,17 @@ def sysExecLine(MEMORY, CVWD, govnshCommand):
         addinfo = f"\x1B[31mFile {govnshCommand.split()[1]} not found\x1B[0m";
     else:
       addinfo = "\x1B[31mInvalid `rmv` | Expected 1 argument\x1B[0m";
+  elif (gpath[0] == "rmd"):
+    if (len(gpath) == 2):
+      addinfoA = True;
+      rdfl = fsReadFile(MEMORY, CVWD, govnshCommand.split()[1]);
+      if (rdfl[0] == 0):
+        MEMORY = fsRemDir(copy(MEMORY), rdfl[2])[1];
+        addinfo = f"\x1B[32mRemoved directory {govnshCommand.split()[1]}\x1B[0m";
+      else:
+        addinfo = f"\x1B[31mDirectory {govnshCommand.split()[1]} not found\x1B[0m";
+    else:
+      addinfo = "\x1B[31mInvalid `rmd` | Expected 1 argument\x1B[0m";
   elif (gpath[0] == "to"):
     addinfoA = True;
     if (len(gpath) == 2):
@@ -553,7 +620,7 @@ def sysExecLine(MEMORY, CVWD, govnshCommand):
   else:
     addinfoA = True;
     addinfo = f"\x1B[31mUnknown command `{gpath[0]}`\x1B[0m";
-  return govnshExitCode, MEMORY, CVWD, addinfoA, addinfo, (govnosExit, govnshExit);
+  return govnshExitCode, MEMORY, CVWD, addinfoA, addinfo, (govnosExit, govnshExit, CPS);
 
 def sysGovnSh(CVWD, CPS, prtsc=False):
   global govnosExit, MEMORY;
@@ -578,7 +645,7 @@ def sysGovnSh(CVWD, CPS, prtsc=False):
     elif (pk == 10):
       print00("\n");
       if (govnshCommand):
-        GEXITCODE, MEMORY, CVWD, addinfoA, addinfo, (govnosExit, govnshExit) = sysExec(MEMORY, CVWD, govnshCommand);
+        GEXITCODE, MEMORY, CVWD, addinfoA, addinfo, (govnosExit, govnshExit, CPS) = sysExec(MEMORY, CVWD, govnshCommand, CPS);
         if (prtsc):
           if (addinfo): print00(addinfo, end="\n");
           else: print00(addinfo);
@@ -588,7 +655,7 @@ def sysGovnSh(CVWD, CPS, prtsc=False):
     elif (pk == 127):
       if (govnshCommand):
         govnshCommand = govnshCommand[:-1];
-        print00(f"\x1B[D \x1B[D \x1B[D");
+        print00(f"\x1B[D \x1B[D");
     elif (pk == [27, 27]):
       govnshExit = True;
       govnosExit = True;
@@ -651,6 +718,9 @@ def sysGravno(CVWD):
           gravnoComm = gravnoComm[:-1];
   return 0;
 
+def getcons(l: list, ix: int):
+  return list(map(lambda a: a[ix], l));
+
 # Function to halt before some event
 def sysHalt(event, **kwargs):
   if (event == 0):
@@ -666,37 +736,109 @@ def fsParseHe(MEMORY, CVWD):
   filesFound = [];
   while (MEMORY[pos] != GC_EOF):
     if (DBGMODE): print(f"\x1B[32mFolders: {foldsFound}, {filesFound}. Pos: {pos}\x1B[0m");
-    if (MEMORY[pos] == 0x01): # directory found
+    if (MEMORY[pos] == 0x71): # directory found
+      diraddr = pos;
       fsn = "";
       pos += 2;
-      while (MEMORY[pos] != 0x01):
+      while (MEMORY[pos] != 0x71):
         fsn += govnocodeToUnicode00(MEMORY[pos]);
         pos += 1;
       foldsFound.append(fsn);
       fsn = "";
       pos += 1;
-    elif (MEMORY[pos] == 0x02): # file found
-      pos += 2;
+    elif (MEMORY[pos] == 0x72): # file found
+      diraddr = pos;
       fsn = ["", ""];
-      while (MEMORY[pos] != 0x03):
+      pos += 2;
+      while (MEMORY[pos] != 0x73):
         fsn[0] += govnocodeToUnicode00(MEMORY[pos]);
         pos += 1;
       pos += 1;
-      while (MEMORY[pos] != 0x03):
+      while (MEMORY[pos] != 0x73):
         fsn[1] += govnocodeToUnicode00(MEMORY[pos]);
         pos += 1;
       pos += 1;
       if (fsn[1] == CVWD):
         filesFound.append(fsn[0]);
         fsn = "";
-      while (MEMORY[pos] != 0x02):
+      while (MEMORY[pos] != 0x72):
         pos += 1;
       pos += 1;
     else:
       if (DBGMODE): print(f"\x1B[31mUnknown symbol found while folder parsing -> {MEMORY[pos]}. {pos}\x1B[0m");
-  foldsNeeded = [f"Data in {CVWD}:"]+(list(map(lambda a: f"  {a: <10}"+" DIR", getFolds(foldsFound, CVWD))))+list(map(lambda a: f"  {a: <10} FILE", filesFound));
+  drvinfo = ["\x1B[A"];
+  if (CVWD == "*"):
+    drvinfo = ["Root Drive (*)", "Drive Serial: "+govnocodeToUnicode01(fsReadFile(MEMORY, "*", "SERIAL.A")[1])];
+  foldsNeeded = drvinfo+[f"Data in {CVWD}:"]+(list(map(lambda a: f"  {a: <10}               DIR", getFolds(foldsFound, CVWD))))+list(map(lambda a: f"  {a: <10} {nhex(fsFileInfo(MEMORY, CVWD, a)[1])[2:]:0>8} {nhex(fsFileInfo(MEMORY, CVWD, a)[0])[2:]:0>4} FILE", filesFound));
   if (DBGMODE): print(f"\x1B[32m{foldsNeeded}\x1B[0m");
   return foldsNeeded, foldsFound;
+
+def fsFileInfo(MEMORY, CVWD, FIN):
+  pos = 0;
+  ins = [];
+  fins = "";
+  fins00 = "";
+  FILESTART = 69420;
+  FILESIZE = 69420;
+  while ((MEMORY[pos] != GC_EOF)):
+    if (MEMORY[pos] == 0x72):
+      FILESTART = pos;
+      fins = "";
+      fins00 = "";
+      pos += 2; # start of filename
+      while (MEMORY[pos] != 0x73):
+        fins00 += govnocodeToUnicode00(MEMORY[pos]);
+        pos += 1;
+      pos += 1;
+      while (MEMORY[pos] != 0x73):
+        fins += govnocodeToUnicode00(MEMORY[pos]);
+        pos += 1;
+      pos += 1;
+      if (fins+fins00 == CVWD+FIN): # found the file
+        FILESIZE = 0;
+        while (MEMORY[pos] != 0x72):
+          FILESIZE += 1;
+          ins.append(MEMORY[pos]);
+          pos += 1;
+        return FILESIZE, FILESTART;
+      else:
+        while (MEMORY[pos] != 0x72):
+          pos += 1;
+      pos += 1;
+    elif (MEMORY[pos] == 0x71):
+      pos += 2;
+      while (MEMORY[pos] != 0x71):
+        pos += 1;
+      pos += 1;
+    else:
+      print(f"\x1B[31m-> {MEMORY[pos]}. {pos}\x1B[0m");
+  return FILESIZE, FILESTART;
+
+def fsDirExist(MEMORY, CVWD, DIN):
+  pos = 0;
+  ins = [];
+  fins = "";
+  finished = False;
+  DIRADDR = 69420;
+  while ((MEMORY[pos] != GC_EOF)):
+    if (MEMORY[pos] == 0x72):
+      pos += 2;
+      while (MEMORY[pos] != 0x72):
+        pos += 1;
+      pos += 1;
+    elif (MEMORY[pos] == 0x71):
+      fins = "";
+      DIRADDR = pos;
+      pos += 2;
+      while (MEMORY[pos] != 0x71):
+        fins += govnocodeToUnicode00(MEMORY[pos]);
+        pos += 1;
+      if (fins == CVWD+DIN):
+        return 0, DIRADDR;
+      pos += 1;
+    else:
+      print(f"\x1B[31m-> {MEMORY[pos]}. {pos}\x1B[0m");
+  return 1, DIRADDR;
 
 def fsReadFile(MEMORY, CVWD, FIN):
   pos = 0;
@@ -709,34 +851,34 @@ def fsReadFile(MEMORY, CVWD, FIN):
   DIRADDR = 69420;
   INSADDR = 69420;
   while ((MEMORY[pos] != GC_EOF)):
-    if (MEMORY[pos] == 0x02):
+    if (MEMORY[pos] == 0x72):
       FILEADDR = pos;
       fins = "";
       fins00 = "";
       pos += 2; # start of filename
       NAMEADDR = pos;
-      while (MEMORY[pos] != 0x03):
+      while (MEMORY[pos] != 0x73):
         fins00 += govnocodeToUnicode00(MEMORY[pos]);
         pos += 1;
       pos += 1;
       DIRADDR = pos;
-      while (MEMORY[pos] != 0x03):
+      while (MEMORY[pos] != 0x73):
         fins += govnocodeToUnicode00(MEMORY[pos]);
         pos += 1;
       pos += 1;
       if (fins+fins00 == CVWD+FIN): # found the file
         INSADDR = pos;
-        while (MEMORY[pos] != 0x02):
+        while (MEMORY[pos] != 0x72):
           ins.append(MEMORY[pos]);
           pos += 1;
         return 0, ins, FILEADDR, NAMEADDR, DIRADDR, INSADDR;
       else:
-        while (MEMORY[pos] != 0x02):
+        while (MEMORY[pos] != 0x72):
           pos += 1;
       pos += 1;
-    elif (MEMORY[pos] == 0x01):
+    elif (MEMORY[pos] == 0x71):
       pos += 2;
-      while (MEMORY[pos] != 0x01):
+      while (MEMORY[pos] != 0x71):
         pos += 1;
       pos += 1;
     else:
@@ -746,7 +888,7 @@ def fsReadFile(MEMORY, CVWD, FIN):
 def fsRemFile(MEMORY, FILESTART):
   fsz = 0;
   MEMORY.pop(FILESTART);
-  while (MEMORY[FILESTART] != 0x02):
+  while (MEMORY[FILESTART] != 0x72):
     MEMORY.pop(FILESTART);
     if (DBGMODE): print(govnocodeToUnicode01(MEMORY[FILESTART-10:FILESTART+10]));
   MEMORY.pop(FILESTART);
@@ -756,7 +898,7 @@ def fsRemFile(MEMORY, FILESTART):
 def fsRemDir(MEMORY, FILESTART):
   fsz = 0;
   MEMORY.pop(FILESTART);
-  while (MEMORY[FILESTART] != 0x01):
+  while (MEMORY[FILESTART] != 0x71):
     MEMORY.pop(FILESTART);
     if (DBGMODE): print(govnocodeToUnicode01(MEMORY[FILESTART-10:FILESTART+10]));
   MEMORY.pop(FILESTART);
@@ -796,101 +938,68 @@ def sysInstallSh(MEMORY):
   gssScr += ["\x1B[47m\x1B[30m  1. Add a user              <<<<", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
   printScr00(gssScr, screenLength, "");
   printScr00(gssScr, screenLength, "", True);
-  leex = False;
-  while (not leex):
-    k = readord();
-    if (k in [0x54, 0x74]):
-      print("\x1B[0m\x1B[44m"+"\n"*100);
-      while (True):
-        command = input(f"[ROOT@{in00['host']}] ");
-        if (command == "exit"):
-          sysShutdown(MEMORY, MEMORYD, MEMORYC, MEMORYSD, exit=True);
-        elif (command == "adduser"):
-          in01 = input("Enter user: ").upper();
-          in02 = input("Add a password: ").upper();
-          in03 = input("Add? (Y/N, default: Y): ").upper();
-          if (in03 in ["", "Y"]):
-            in00["user"] = [in01, in02, 0x00];
-        elif (command == "passwd"):
-          in01 = input("Enter new root password: ").upper();
-          in00["root"] = in01;
-        elif (command == "hostname"):
-          in01 = input("Enter new host name: ").upper();
-          in00["host"] = in01;
-        elif (command == "config-gen"):
-          in01 = input("Are you sure? (Y/N): ");
-          while (in01 not in ["Y", "N"]):
-            in01 = input("Are you sure? (Y/N): ");
-          if (in01 == "Y"):
-            print("  Building a filesystem...");
-            print("  Installing GovnFS Basic Memory Bootstrap...");
-            MEMORY = sysInstallBasic(MEMORY, unicodeToGovnocodeDir(in00["user"][0]), (unicodeToGovnocodeDir(in00["user"][1]), unicodeToGovnocodeDir(in00["root"])), unicodeToGovnocodeDir(in00["host"]));
-            print("  GovnFS installed!");
-            print("  Filesystem built!");
-    elif (k == 10):
-      leex = True;
-    gssScr.append("\x1B[44m\x1B[37mEnter username: ");
-    printScr00(gssScr, screenLength, "", True);
-    in01 = input("").upper();
-    gssScr.append("OK.");
-    gssScr.append("Enter password: ");
-    printScr00(gssScr, screenLength, "", True);
-    in02 = input("").upper();
-    gssScr.append("OK.");
-    printScr00(gssScr, screenLength, "", True);
-    in00["user"] = [in01, in02, 0x00];
-    sleep(0.5);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
-    gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password    <<<<", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
-    printScr00(gssScr, screenLength, "", True);
-    input();
-    gssScr.append("\x1B[44m\x1B[37mEnter root password: ");
-    printScr00(gssScr, screenLength, "", True);
-    in01 = input("").upper();
-    gssScr.append("OK.");
-    printScr00(gssScr, screenLength, "", True);
-    in00["root"] = in01;
-    sleep(0.5);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
-    gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname       <<<<", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
-    printScr00(gssScr, screenLength, "", True);
-    input();
-    gssScr.append("Enter hostname: ");
-    printScr00(gssScr, screenLength, "", True);
-    in01 = input().upper();
-    gssScr.append("OK.");
-    printScr00(gssScr, screenLength, "", True);
-    in00["host"] = in01;
-    sleep(0.5);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
-    gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname",	"  4. Save changes to drive <<<<", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
-    printScr00(gssScr, screenLength, "", True);
-    input();
-    gssScr.append("  Building a filesystem...");
-    gssScr.append("  Installing GovnFS Basic Memory Bootstrap...");
-    MEMORY = sysInstallBasic(MEMORY, unicodeToGovnocodeDir(in00["user"][0]), (unicodeToGovnocodeDir(in00["user"][1]), unicodeToGovnocodeDir(in00["root"])), unicodeToGovnocodeDir(in00["host"]));
-    printScr00(gssScr, screenLength, "", True);
-    sleep(1);
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
-    gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish                <<<<", f"\x1B[44m\x1B[37mYour drive serial number is: 14-2FA2-81.", "Press Ret to continue."];
-    printScr00(gssScr, screenLength, "", True);
-    input();
-    gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
-    gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish                <<<<", "\x1B[44m\x1B[37mInstallation finished!", "Press Ret to continue."];
-    printScr00(gssScr, screenLength, "", True);
-    input();
+  gssScr.append("\x1B[44m\x1B[37mEnter username: ");
+  printScr00(gssScr, screenLength, "", True);
+  in01 = input("").upper();
+  gssScr.append("OK.");
+  gssScr.append("Enter password: ");
+  printScr00(gssScr, screenLength, "", True);
+  in02 = input("").upper();
+  gssScr.append("OK.");
+  printScr00(gssScr, screenLength, "", True);
+  in00["user"] = [in01, in02, 0x00];
+  gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
+  gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password    <<<<", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
+  printScr00(gssScr, screenLength, "", True);
+  gssScr.append("\x1B[44m\x1B[37mEnter root password: ");
+  printScr00(gssScr, screenLength, "", True);
+  in01 = input("").upper();
+  gssScr.append("OK.");
+  printScr00(gssScr, screenLength, "", True);
+  in00["root"] = in01;
+  gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
+  gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname       <<<<", "  4. Save changes to drive", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
+  printScr00(gssScr, screenLength, "", True);
+  gssScr.append("Enter hostname: ");
+  printScr00(gssScr, screenLength, "", True);
+  in01 = input().upper();
+  gssScr.append("OK.");
+  printScr00(gssScr, screenLength, "", True);
+  in00["host"] = in01;
+  sleep(0.5);
+  gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
+  gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname",	"  4. Save changes to drive <<<<", "  5. Finish", "\x1B[44m\x1B[37mPress Ret to continue."];
+  printScr00(gssScr, screenLength, "", True);
+  gssScr.append("  Building a filesystem...");
+  gssScr.append("  Installing GovnFS Basic Memory Bootstrap...");
+  MEMORY = sysInstallBasic(MEMORY, unicodeToGovnocodeDir(in00["user"][0]), (unicodeToGovnocodeDir(in00["user"][1]), unicodeToGovnocodeDir(in00["root"])), unicodeToGovnocodeDir(in00["host"]));
+  printScr00(gssScr, screenLength, "", True);
+  sleep(1);
+  gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
+  gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish                <<<<", f"\x1B[44m\x1B[37mYour drive serial number is: 14-2FA2-81.", "Press Ret to continue."];
+  printScr00(gssScr, screenLength, "", True);
+  input();
+  gssScr = [f"{str(os.system('clear'))*0}\x1B[44m\x1B[37mWelcome to GovnOS!", "\x1B[47m\x1B[30mLoading drive...", f"\x1B[44m\x1B[37mVersion: {GOS_VER}", "Loaded."];
+  gssScr += ["\x1B[47m\x1B[30m  1. Add a user", "  2. Change root password", "  3. Change hostname", "  4. Save changes to drive", "  5. Finish                <<<<", "\x1B[44m\x1B[37mInstallation finished!", "Press Ret to continue."];
+  printScr00(gssScr, screenLength, "", True);
+  input();
   return 0, MEMORY;
 
-def Govnasm(M, MD, MC, MSD):
-  return 1;
+def MemLoadProgram(prog, addr, MD):
+  for i,j in enumerate(prog):
+    MD[addr+i] = j;
+  return MD;
 
-# Turn on the machine (load memory)
-MEMORY, MEMORYD, MEMORYC, MEMORYSD = memLoad(drive);
+def GovnBin(M, MD, MC, MSD):
+  print("Govno Core 32");
+  cpu[PC] = 0;
+  print("Process end");
+  return 0;
 
-if (not MEMORY[0]):
-  installexitcode, MEMORY = sysInstallSh(MEMORY);
-  sysShutdown(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
-  sys.exit(21);
+def CPUReset(cpu):
+  cpu[PC] = 0xFFFC;
+  cpu[SP] = 0xFFFF;
+  return cpu;
 
 def sysGovnKernel(CDRV, MEMORY, CVWD, hostname, CUSR):
   print(f"GovnOS {GOS_VER}");
@@ -906,7 +1015,9 @@ def sysGovnKernel(CDRV, MEMORY, CVWD, hostname, CUSR):
   usr00 = input("User: ").upper();
   usr01 = input("Password: ").upper();
 
-  while (sysReadSece(govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "SECE.C")[1])).get(usr00) != usr01):
+  SeceC = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "SECE.C")[1]);
+  SeceC = sysReadSece(SeceC);
+  while (SeceC.get(usr00) != usr01):
     print("Incorrect login or password!");
     usr00 = input("User: ").upper();
     usr01 = input("Password: ").upper();
@@ -917,47 +1028,53 @@ def sysGovnKernel(CDRV, MEMORY, CVWD, hostname, CUSR):
   # If CUSR is not ROOT, spawn in *HOME* by default.
   if (CUSR != "ROOT"):
     CVWD = "*HOME*";
+  ST_WEL = \
+    "\nPress ^(A) to start TyGovno command mode" + \
+    "\nPress ^(E) to start Command" + \
+    "\nPress ^(G) to start Gravno graphics mode" + \
+    "\nPress ^(L) to shutdown";
 
-  print("\nPress Esc,A to start TyGovno command mode");
-  print("Press Esc,C to start Command");
-  print("Press Esc,G to start Gravno graphics mode");
-  print("Press Esc,Esc to shutdown");
-
+  print(ST_WEL);
   govnshCList = [];
   govnosExit = False;
 
   # Native shell -> GovnOS
   while (not govnosExit):
     k = readord();
-    if ((k == [27, 65]) or (k == [27, 97])):
+    if (k == 0x01):
       print("\nLoading TyGovno...");
       print("TyGovno loaded!");
       print("Use `help 0` to get help");
       govnshCList = sysGovnSh(CVWD, CPS, False);
-      print("\nPress Esc,A to start TyGovno command mode");
-      print("Press Esc,C to start Command");
-      print("Press Esc,G to start Gravno graphics mode");
-      print("Press Esc,Esc to shutdown");
-    elif ((k == [27, 67]) or (k == [27, 99])):
-      print("\nLoading TyGovno...");
-      print("TyGovno loaded!");
+      print(ST_WEL);
+    elif (k == 0x05):
+      print("\nLoading Command...");
       print("Use `help 0` to get help");
       govnshCList = sysGovnSh(CVWD, CPS, True);
-      print("\nPress Esc,A to start TyGovno command mode");
-      print("Press Esc,C to start Command");
-      print("Press Esc,G to start Gravno graphics mode");
-      print("Press Esc,Esc to shutdown");
-    elif ((k == [27, 71]) or (k == [27, 103])):
+      print(ST_WEL);
+    elif (k == 0x07):
       print("\nLoading Gravno...");
       print("Gravno loaded!");
       sysGravno(CVWD);
-      print("\nPress Esc,A to start TyGovno command mode");
-      print("Press Esc,C to start Command");
-      print("Press Esc,G to start Gravno graphics mode");
-      print("Press Esc,Esc to shutdown");
-    elif (k == [27, 27]):
+      print(ST_WEL);
+    elif (k == 0x0C):
       govnosExit = True;
   return 0, govnshCList;
+
+# Turn on the machine (load memory)
+MEMORY, MEMORYD, MEMORYC, MEMORYSD = memLoad(drive);
+CPU = [
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, # R0-RF
+  0, 0, 0,                                        # SP, BP, PC
+  0, 0,                                           # FLAGS (ZF, OF)
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  # E0-EF
+];
+
+if ((not MEMORY[0]) or (MEMORY[0] == GC_EOF)):
+  installexitcode, MEMORY = sysInstallSh(MEMORY);
+  sysShutdown(MEMORY, MEMORYD, MEMORYC, MEMORYSD);
+  sys.exit(21);
+
 
 hostname = govnocodeToUnicode01(fsReadFile(MEMORY, "*GRP*", "HOST")[1]);
 CDRV = "GVSLOAD"; # Load manager

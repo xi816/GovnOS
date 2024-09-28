@@ -1,0 +1,10 @@
+isx = fsFileExists("*KERNEL*", "00AAA.B");
+
+# isx = 0 if file doesn't exist;
+# isx = 1 if file exists;
+
+
+isx00 = fsDirExists("*KERNEL*");
+
+# isx00 = 0 if directory doesn't exist;
+# isx00 = 1 if directory exists;

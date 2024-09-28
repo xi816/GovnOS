@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+echo "Copying libraries...";
+sudo cp ./lib/* /lib/python3.12/
+echo "Done!";
